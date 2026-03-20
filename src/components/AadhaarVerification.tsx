@@ -218,8 +218,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
           </div>
         )}
 
-        {/* Verify button for manual mode or after scan */}
-        {(mode === 'manual' || (mode === 'scan' && aadhaar && !scanning && result === 'idle')) && (
+        {(mode === 'manual' || (mode === 'scan' && aadhaar && !scanning)) && result === 'idle' && (
           <Button
             variant="booth"
             className="w-full"

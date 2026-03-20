@@ -223,7 +223,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
             variant="booth"
             className="w-full"
             onClick={handleVerify}
-            disabled={aadhaar.replace(/\s/g, '').length < 12 || verifying || result === 'success'}
+            disabled={aadhaar.replace(/\s/g, '').length < 12 || verifying}
           >
             {verifying ? (
               <span className="flex items-center gap-2">

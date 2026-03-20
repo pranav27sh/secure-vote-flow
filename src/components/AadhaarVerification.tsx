@@ -147,7 +147,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
                   variant="booth"
                   className="gap-2 w-full max-w-xs"
                   onClick={startScanner}
-                  disabled={verifying || result === 'success'}
+                  disabled={verifying}
                 >
                   <Camera className="w-5 h-5" /> Start Camera Scan
                 </Button>

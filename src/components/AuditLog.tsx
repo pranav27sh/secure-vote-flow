@@ -2,6 +2,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { AuditEntry } from '@/types/verification';
 import { FileText, Info, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Props {
   entries: AuditEntry[];
@@ -22,17 +23,19 @@ const colors = {
 };
 
 export function AuditLog({ entries }: Props) {
+  const { t } = useLanguage();
+
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="p-3 border-b border-border bg-muted/30 flex items-center gap-2">
         <FileText className="w-4 h-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold text-foreground">Audit Log</h3>
-        <span className="ml-auto text-xs text-muted-foreground">{entries.length} entries</span>
+        <h3 className="text-sm font-semibold text-foreground">{t('auditLog')}</h3>
+        <span className="ml-auto text-xs text-muted-foreground">{entries.length} {t('entries')}</span>
       </div>
       <ScrollArea className="h-64">
         <div className="p-2 space-y-1">
           {entries.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-8">No actions recorded yet</p>
+            <p className="text-xs text-muted-foreground text-center py-8">{t('noActions')}</p>
           ) : (
             [...entries].reverse().map((entry) => (
               <div key={entry.id} className="flex items-start gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
@@ -41,9 +44,7 @@ export function AuditLog({ entries }: Props) {
                   <p className="text-xs font-medium text-foreground truncate">{entry.action}</p>
                   {entry.details && <p className="text-xs text-muted-foreground truncate">{entry.details}</p>}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {entry.timestamp.toLocaleTimeString()}
-                </span>
+                <span className="text-xs text-muted-foreground shrink-0">{entry.timestamp.toLocaleTimeString()}</span>
               </div>
             ))
           )}

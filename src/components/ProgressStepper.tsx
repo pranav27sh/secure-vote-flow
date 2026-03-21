@@ -1,6 +1,7 @@
 import { Check, X, Fingerprint, CreditCard, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StageStatus } from '@/types/verification';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Step {
   label: string;
@@ -18,26 +19,26 @@ interface ProgressStepperProps {
 }
 
 export function ProgressStepper({ stages, currentStage }: ProgressStepperProps) {
+  const { t } = useLanguage();
+
   const steps: Step[] = [
-    { label: 'Aadhaar', icon: <CreditCard className="w-5 h-5" />, status: stages.aadhaar },
-    { label: 'Biometric', icon: <Fingerprint className="w-5 h-5" />, status: stages.biometric },
-    { label: 'Voter ID', icon: <ShieldCheck className="w-5 h-5" />, status: stages.voterId },
+    { label: t('aadhaar'), icon: <CreditCard className="w-5 h-5" />, status: stages.aadhaar },
+    { label: t('biometric'), icon: <Fingerprint className="w-5 h-5" />, status: stages.biometric },
+    { label: t('voterId'), icon: <ShieldCheck className="w-5 h-5" />, status: stages.voterId },
   ];
 
   return (
     <div className="flex items-center justify-center gap-0 w-full max-w-lg mx-auto">
       {steps.map((step, i) => (
-        <div key={step.label} className="flex items-center flex-1">
+        <div key={i} className="flex items-center flex-1">
           <div className="flex flex-col items-center gap-1.5 flex-1">
-            <div
-              className={cn(
-                'w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300',
-                step.status === 'success' && 'bg-success border-success text-success-foreground',
-                step.status === 'failed' && 'bg-destructive border-destructive text-destructive-foreground',
-                step.status === 'active' && 'border-primary bg-primary/10 text-primary animate-pulse',
-                step.status === 'pending' && 'border-muted-foreground/30 text-muted-foreground/50'
-              )}
-            >
+            <div className={cn(
+              'w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300',
+              step.status === 'success' && 'bg-success border-success text-success-foreground',
+              step.status === 'failed' && 'bg-destructive border-destructive text-destructive-foreground',
+              step.status === 'active' && 'border-primary bg-primary/10 text-primary animate-pulse',
+              step.status === 'pending' && 'border-muted-foreground/30 text-muted-foreground/50'
+            )}>
               {step.status === 'success' ? <Check className="w-5 h-5" /> : step.status === 'failed' ? <X className="w-5 h-5" /> : step.icon}
             </div>
             <span className={cn(

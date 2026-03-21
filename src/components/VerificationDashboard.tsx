@@ -8,6 +8,8 @@ import { VoterIdVerification } from '@/components/VoterIdVerification';
 import { TokenGeneration } from '@/components/TokenGeneration';
 import { ManualVerification } from '@/components/ManualVerification';
 import { AuditLog } from '@/components/AuditLog';
+import { LanguageSelection } from '@/components/LanguageSelection';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { VerificationState, AuditEntry, StageStatus } from '@/types/verification';
 
 const generateToken = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -25,6 +27,8 @@ export function VerificationDashboard() {
   const [state, setState] = useState<VerificationState>(initialState);
   const [darkMode, setDarkMode] = useState(false);
   const [voted, setVoted] = useState(false);
+  const [languageSelected, setLanguageSelected] = useState(false);
+  const { t } = useLanguage();
 
   const addLog = useCallback((action: string, status: AuditEntry['status'], details?: string) => {
     const entry: AuditEntry = { id: crypto.randomUUID(), timestamp: new Date(), action, status, details };
@@ -92,6 +96,7 @@ export function VerificationDashboard() {
     addLog('Session reset', 'info', 'Ready for next voter');
     setState({ ...initialState, auditLog: [], isOnline: state.isOnline });
     setVoted(false);
+    setLanguageSelected(false);
   }, [state.isOnline, addLog]);
 
   const toggleDark = () => {
@@ -107,15 +112,18 @@ export function VerificationDashboard() {
     addLog(state.isOnline ? 'Offline mode activated' : 'Back online', state.isOnline ? 'warning' : 'info');
   };
 
+  if (!languageSelected) {
+    return <LanguageSelection onSelect={() => setLanguageSelected(true)} />;
+  }
+
   const currentStageLabel = state.token
-    ? 'Token Generated'
+    ? t('tokenGenerated')
     : state.mode === 'manual'
-    ? 'Manual Verification'
-    : ['Aadhaar Verification', 'Biometric Verification', 'Voter ID Verification'][state.currentStage];
+    ? t('manualVerification')
+    : [t('aadhaarVerification'), t('biometricVerification'), t('voterIdVerification')][state.currentStage];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -123,8 +131,8 @@ export function VerificationDashboard() {
               <Shield className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-foreground leading-tight">Secure Voter Verification</h1>
-              <p className="text-xs text-muted-foreground">Election Commission of India — Polling Booth System</p>
+              <h1 className="text-base font-bold text-foreground leading-tight">{t('headerTitle')}</h1>
+              <p className="text-xs text-muted-foreground">{t('headerSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -133,9 +141,9 @@ export function VerificationDashboard() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border hover:bg-muted transition-colors"
             >
               {state.isOnline ? (
-                <><Wifi className="w-3.5 h-3.5 text-success" /> Online</>
+                <><Wifi className="w-3.5 h-3.5 text-success" /> {t('online')}</>
               ) : (
-                <><WifiOff className="w-3.5 h-3.5 text-destructive" /> Offline</>
+                <><WifiOff className="w-3.5 h-3.5 text-destructive" /> {t('offline')}</>
               )}
             </button>
             <button
@@ -150,41 +158,37 @@ export function VerificationDashboard() {
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Status bar */}
             <div className="flex items-center justify-between bg-card border border-border rounded-lg p-4">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Current Stage</p>
-                <p className="text-sm font-semibold text-foreground">{voted ? '✓ Voting Complete' : currentStageLabel}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{t('currentStage')}</p>
+                <p className="text-sm font-semibold text-foreground">{voted ? t('votingComplete') : currentStageLabel}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Mode:</span>
+                <span className="text-xs text-muted-foreground">{t('mode')}:</span>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                   state.mode === 'manual' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
                 }`}>
-                  {state.mode === 'manual' ? 'Manual' : 'Primary'}
+                  {state.mode === 'manual' ? t('manual') : t('primary')}
                 </span>
               </div>
             </div>
 
-            {/* Progress stepper (primary mode only) */}
             {state.mode === 'primary' && !voted && (
               <div className="bg-card border border-border rounded-lg p-4">
                 <ProgressStepper stages={state.stages} currentStage={state.currentStage} />
               </div>
             )}
 
-            {/* Voted state */}
             {voted ? (
               <div className="text-center py-16 fade-in">
                 <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
                   <span className="text-4xl">🗳️</span>
                 </div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Vote Recorded Successfully</h2>
-                <p className="text-muted-foreground mb-6">The voter has been marked as voted. Token has been consumed.</p>
+                <h2 className="text-2xl font-bold text-foreground mb-2">{t('voteRecorded')}</h2>
+                <p className="text-muted-foreground mb-6">{t('voterMarked')}</p>
                 <Button variant="booth" onClick={handleReset} className="gap-2">
-                  <RotateCcw className="w-4 h-4" /> Reset for Next Voter
+                  <RotateCcw className="w-4 h-4" /> {t('resetNextVoter')}
                 </Button>
               </div>
             ) : state.token ? (
@@ -228,32 +232,28 @@ export function VerificationDashboard() {
             )}
           </div>
 
-          {/* Side panel */}
           <div className="space-y-4">
             <AuditLog entries={state.auditLog} />
-
-            {/* Quick actions */}
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('quickActions')}</h3>
               <Button variant="booth-destructive" className="w-full gap-2" onClick={handleReset}>
-                <RotateCcw className="w-4 h-4" /> Reset for Next Voter
+                <RotateCcw className="w-4 h-4" /> {t('resetNextVoter')}
               </Button>
               {state.mode === 'primary' && !state.token && !voted && (
                 <Button variant="booth-outline" className="w-full" onClick={switchToManual}>
-                  Switch to Manual Verification
+                  {t('switchManualVerif')}
                 </Button>
               )}
             </div>
 
-            {/* System info */}
             <div className="bg-card border border-border rounded-lg p-4 space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">System Info</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('systemInfo')}</h3>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex justify-between"><span>Booth ID</span><span className="font-mono">BH-2024-0147</span></div>
-                <div className="flex justify-between"><span>Constituency</span><span>New Delhi - 01</span></div>
-                <div className="flex justify-between"><span>Officer</span><span>ID: OFF-8832</span></div>
-                <div className="flex justify-between"><span>Status</span>
-                  <span className={state.isOnline ? 'text-success' : 'text-destructive'}>{state.isOnline ? 'Online' : 'Offline'}</span>
+                <div className="flex justify-between"><span>{t('boothId')}</span><span className="font-mono">BH-2024-0147</span></div>
+                <div className="flex justify-between"><span>{t('constituency')}</span><span>New Delhi - 01</span></div>
+                <div className="flex justify-between"><span>{t('officer')}</span><span>ID: OFF-8832</span></div>
+                <div className="flex justify-between"><span>{t('status')}</span>
+                  <span className={state.isOnline ? 'text-success' : 'text-destructive'}>{state.isOnline ? t('online') : t('offline')}</span>
                 </div>
               </div>
             </div>

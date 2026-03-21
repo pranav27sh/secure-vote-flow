@@ -1,0 +1,83 @@
+import { Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+interface Props {
+  onSelect: () => void;
+}
+
+export function LanguageSelection({ onSelect }: Props) {
+  const { lang, setLang } = useLanguage();
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md text-center space-y-8">
+        <div className="space-y-4">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto">
+            <Shield className="w-9 h-9 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Choose Your Language</h1>
+            <p className="text-lg text-muted-foreground mt-1">कृपया अपनी भाषा चुनें</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Election Commission of India — Polling Booth System
+          </p>
+          <p className="text-sm text-muted-foreground">
+            भारत निर्वाचन आयोग — मतदान केंद्र प्रणाली
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            onClick={() => setLang('en')}
+            className={`w-full p-5 rounded-xl border-2 text-left transition-all duration-200 ${
+              lang === 'en'
+                ? 'border-primary bg-primary/5 shadow-md'
+                : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-3xl">🇬🇧</span>
+              <div>
+                <p className="text-lg font-semibold text-foreground">English</p>
+                <p className="text-sm text-muted-foreground">Continue in English</p>
+              </div>
+              {lang === 'en' && (
+                <div className="ml-auto w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground text-sm">✓</span>
+                </div>
+              )}
+            </div>
+          </button>
+
+          <button
+            onClick={() => setLang('hi')}
+            className={`w-full p-5 rounded-xl border-2 text-left transition-all duration-200 ${
+              lang === 'hi'
+                ? 'border-primary bg-primary/5 shadow-md'
+                : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-3xl">🇮🇳</span>
+              <div>
+                <p className="text-lg font-semibold text-foreground">हिन्दी</p>
+                <p className="text-sm text-muted-foreground">हिन्दी में जारी रखें</p>
+              </div>
+              {lang === 'hi' && (
+                <div className="ml-auto w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground text-sm">✓</span>
+                </div>
+              )}
+            </div>
+          </button>
+        </div>
+
+        <Button variant="booth" className="w-full h-14 text-lg" onClick={onSelect}>
+          {lang === 'hi' ? 'आगे बढ़ें' : 'Proceed'}
+        </Button>
+      </div>
+    </div>
+  );
+}

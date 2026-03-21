@@ -3,6 +3,7 @@ import { Ticket, Timer, Vote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Props {
   token: string;
@@ -11,14 +12,12 @@ interface Props {
 }
 
 export function TokenGeneration({ token, isManual, onProceedToVote }: Props) {
-  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
+  const { t } = useLanguage();
+  const [timeLeft, setTimeLeft] = useState(180);
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
-      setExpired(true);
-      return;
-    }
+    if (timeLeft <= 0) { setExpired(true); return; }
     const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(timer);
   }, [timeLeft]);
@@ -37,52 +36,37 @@ export function TokenGeneration({ token, isManual, onProceedToVote }: Props) {
         <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-2">
           <Ticket className="w-8 h-8 text-success" />
         </div>
-        <CardTitle className="text-xl">
-          {isManual ? 'Manually Verified Token' : 'One-Time Voting Token'}
-        </CardTitle>
-        <CardDescription>
-          {isManual ? 'Verified via manual process with supervisor approval' : 'All 3 stages passed successfully'}
-        </CardDescription>
+        <CardTitle className="text-xl">{isManual ? t('manuallyVerifiedToken') : t('oneTimeToken')}</CardTitle>
+        <CardDescription>{isManual ? t('manualTokenDesc') : t('allStagesPassed')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Token display */}
         <div className="text-center">
           <div className="inline-block px-8 py-4 bg-muted rounded-xl border-2 border-dashed border-primary/30">
             <p className="text-4xl font-mono font-bold tracking-[0.3em] text-primary">{token}</p>
           </div>
           {isManual && (
             <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-warning/10 text-warning text-xs font-medium rounded-full">
-              Manual Verification
+              {t('manualVerification')}
             </div>
           )}
         </div>
 
-        {/* Countdown */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <Timer className="w-4 h-4" /> Token expires in
-            </span>
+            <span className="flex items-center gap-1.5 text-muted-foreground"><Timer className="w-4 h-4" /> {t('tokenExpiresIn')}</span>
             <span className={cn('font-mono font-bold text-lg', timeLeft <= 30 ? 'text-destructive' : 'text-foreground')}>
-              {expired ? 'EXPIRED' : formatTime(timeLeft)}
+              {expired ? t('expired') : formatTime(timeLeft)}
             </span>
           </div>
           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className={cn('h-full rounded-full transition-all duration-1000', timeLeft <= 30 ? 'bg-destructive' : 'bg-success')}
-              style={{ width: `${progress}%` }}
-            />
+            <div className={cn('h-full rounded-full transition-all duration-1000', timeLeft <= 30 ? 'bg-destructive' : 'bg-success')}
+              style={{ width: `${progress}%` }} />
           </div>
         </div>
 
-        <Button
-          variant="booth-success"
-          className="w-full gap-2"
-          onClick={onProceedToVote}
-          disabled={expired}
-        >
+        <Button variant="booth-success" className="w-full gap-2" onClick={onProceedToVote} disabled={expired}>
           <Vote className="w-5 h-5" />
-          {expired ? 'Token Expired — Reset Required' : 'Proceed to Vote (Simulated)'}
+          {expired ? t('tokenExpiredReset') : t('proceedToVote')}
         </Button>
       </CardContent>
     </Card>

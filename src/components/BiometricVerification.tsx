@@ -11,22 +11,50 @@ interface Props {
   onSwitchManual: () => void;
 }
 
+interface BiometricResult {
+  status: 'idle' | 'success' | 'fail';
+  completed: boolean;
+}
+
 export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Props) {
   const { t } = useLanguage();
   const [scanning, setScanning] = useState(false);
-  const [scanType, setScanType] = useState<'fingerprint' | 'iris'>('fingerprint');
-  const [result, setResult] = useState<'idle' | 'success' | 'fail'>('idle');
+  const [fingerprintResult, setFingerprintResult] = useState<BiometricResult>({ status: 'idle', completed: false });
+  const [irisResult, setIrisResult] = useState<BiometricResult>({ status: 'idle', completed: false });
+  const [currentPhase, setCurrentPhase] = useState<'fingerprint' | 'iris'>('fingerprint');
 
   const handleScan = () => {
     setScanning(true);
-    setResult('idle');
+    const currentResult = currentPhase === 'fingerprint' ? fingerprintResult : irisResult;
+    const setCurrentResult = currentPhase === 'fingerprint' ? setFingerprintResult : setIrisResult;
+
+    setCurrentResult({ status: 'idle', completed: false });
+
     setTimeout(() => {
       setScanning(false);
       const success = Math.random() > 0.15;
-      if (success) { setResult('success'); setTimeout(onSuccess, 800); }
-      else { setResult('fail'); onFail(); }
+      if (success) {
+        setCurrentResult({ status: 'success', completed: true });
+
+        // If fingerprint was successful, move to iris
+        if (currentPhase === 'fingerprint') {
+          setTimeout(() => {
+            setCurrentPhase('iris');
+          }, 800);
+        }
+        // If iris was successful, complete biometric verification
+        else {
+          setTimeout(onSuccess, 800);
+        }
+      } else {
+        setCurrentResult({ status: 'fail', completed: false });
+        onFail();
+      }
     }, 3000);
   };
+
+  const isAllBiometricsComplete = fingerprintResult.completed && irisResult.completed;
+  const currentResult = currentPhase === 'fingerprint' ? fingerprintResult : irisResult;
 
   return (
     <Card className="fade-in border-primary/20 shadow-lg">
@@ -42,22 +70,43 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Biometric Progress Steps */}
         <div className="flex gap-2">
-          <Button variant={scanType === 'fingerprint' ? 'default' : 'outline'} onClick={() => setScanType('fingerprint')}
-            className="flex-1 gap-2" disabled={scanning || result === 'success'}>
-            <Fingerprint className="w-4 h-4" /> {t('fingerprint')}
-          </Button>
-          <Button variant={scanType === 'iris' ? 'default' : 'outline'} onClick={() => setScanType('iris')}
-            className="flex-1 gap-2" disabled={scanning || result === 'success'}>
-            <ScanEye className="w-4 h-4" /> {t('irisScan')}
-          </Button>
+          <div className="flex-1">
+            <div className={cn('p-3 rounded-lg border-2 transition-all',
+              fingerprintResult.completed ? 'border-success bg-success/10' :
+              currentPhase === 'fingerprint' ? 'border-primary bg-primary/10' : 'border-border')}>
+              <div className="flex items-center gap-2 mb-1">
+                <Fingerprint className="w-4 h-4" />
+                <span className="text-sm font-semibold">{t('fingerprint')}</span>
+                {fingerprintResult.completed && <span className="text-success ml-auto">✓</span>}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {fingerprintResult.completed ? t('biometricSuccess') : currentPhase === 'fingerprint' ? t('currentPhase') : t('pending')}
+              </p>
+            </div>
+          </div>
+          <div className="flex-1">
+            <div className={cn('p-3 rounded-lg border-2 transition-all',
+              irisResult.completed ? 'border-success bg-success/10' :
+              currentPhase === 'iris' ? 'border-primary bg-primary/10' : 'border-border')}>
+              <div className="flex items-center gap-2 mb-1">
+                <ScanEye className="w-4 h-4" />
+                <span className="text-sm font-semibold">{t('irisScan')}</span>
+                {irisResult.completed && <span className="text-success ml-auto">✓</span>}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {irisResult.completed ? t('biometricSuccess') : currentPhase === 'iris' ? t('currentPhase') : t('pending')}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="relative w-32 h-32 mx-auto">
           <div className={cn('w-full h-full rounded-full border-4 flex items-center justify-center transition-all duration-300',
-            scanning && 'border-primary', result === 'success' && 'border-success bg-success/10',
-            result === 'fail' && 'border-destructive bg-destructive/10', result === 'idle' && !scanning && 'border-border')}>
-            {scanType === 'fingerprint' ? (
+            scanning && 'border-primary', currentResult.status === 'success' && 'border-success bg-success/10',
+            currentResult.status === 'fail' && 'border-destructive bg-destructive/10', currentResult.status === 'idle' && !scanning && 'border-border')}>
+            {currentPhase === 'fingerprint' ? (
               <Fingerprint className={cn('w-16 h-16 transition-colors', scanning ? 'text-primary' : 'text-muted-foreground/40')} />
             ) : (
               <ScanEye className={cn('w-16 h-16 transition-colors', scanning ? 'text-primary' : 'text-muted-foreground/40')} />
@@ -72,24 +121,27 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          {scanning ? t('scanningHoldStill') : result === 'idle' ? `${t('pressScanBegin')} ${scanType === 'fingerprint' ? t('fingerprint') : t('irisScan')} ${t('capture')}` : ''}
+          {scanning ? t('scanningHoldStill') : currentResult.status === 'idle' ? `${t('pressScanBegin')} ${currentPhase === 'fingerprint' ? t('fingerprint') : t('irisScan')} ${t('capture')}` : ''}
         </p>
 
-        {result === 'fail' && (
+        {currentResult.status === 'fail' && (
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium fade-in border border-destructive/20">{t('biometricFailed')}</div>
         )}
-        {result === 'success' && (
-          <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('biometricSuccess')}</div>
+        {currentResult.status === 'success' && currentPhase === 'fingerprint' && (
+          <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('fingerprint')} {t('biometricSuccess')} - {t('proceedingIris')}</div>
+        )}
+        {isAllBiometricsComplete && (
+          <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('allBiometricsSuccess')}</div>
         )}
 
         <div className="flex gap-2 pt-2">
-          <Button variant="booth" className="flex-1" onClick={handleScan} disabled={scanning || result === 'success'}>
+          <Button variant="booth" className="flex-1" onClick={handleScan} disabled={scanning || isAllBiometricsComplete}>
             {scanning ? (
               <span className="flex items-center gap-2">
                 <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                 {t('scanning')}
               </span>
-            ) : result === 'fail' ? t('retryScan') : t('verifyBiometric')}
+            ) : currentResult.status === 'fail' ? t('retryScan') : t('verifyBiometric')}
           </Button>
         </div>
 

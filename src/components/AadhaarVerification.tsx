@@ -1,8 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { CreditCard, QrCode, Camera, X, Keyboard } from 'lucide-react';
+import { CreditCard, QrCode, Camera, X, Keyboard, ChevronDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Props {
   onSuccess: () => void;
@@ -10,24 +16,41 @@ interface Props {
   onSwitchManual: () => void;
 }
 
+const ID_TYPES = [
+  { value: 'aadhaar', label: 'Aadhaar Card' },
+  { value: 'pan', label: 'PAN Card' },
+  { value: 'driving_license', label: 'Driving License' },
+  { value: 'passport', label: 'Passport' },
+  { value: 'mgnrega', label: 'MGNREGA Card' },
+  { value: 'smart_card', label: 'Smart Card' },
+  { value: 'health_insurance', label: 'Health Insurance Smart Card' },
+  { value: 'service_id', label: 'Service Identity Card' },
+  { value: 'pension', label: 'Pension Document' },
+  { value: 'passbook', label: 'Passbook' },
+  { value: 'official_id', label: 'Official Identity Card' },
+] as const;
+
+type IdType = typeof ID_TYPES[number]['value'];
+
 export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props) {
-  const [aadhaar, setAadhaar] = useState('');
+  const [selectedIdType, setSelectedIdType] = useState<IdType>('aadhaar');
+  const [idNumber, setIdNumber] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [result, setResult] = useState<'idle' | 'success' | 'fail'>('idle');
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
   const scannerRef = useRef<any>(null);
-  const scannerContainerId = 'aadhaar-qr-reader';
+  const scannerContainerId = 'id-qr-reader';
+
+  const selectedLabel = ID_TYPES.find(t => t.value === selectedIdType)?.label ?? 'Aadhaar Card';
 
   const stopScanner = async () => {
     if (scannerRef.current) {
       try {
         await scannerRef.current.stop();
         scannerRef.current.clear();
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
       scannerRef.current = null;
     }
     setScanning(false);
@@ -36,8 +59,6 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
   const startScanner = async () => {
     setScanError('');
     setScanning(true);
-
-    // Small delay to ensure the container is rendered
     await new Promise(r => setTimeout(r, 100));
 
     try {
@@ -49,29 +70,15 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
-          // Extract 12-digit number from QR data
-          const digits = decodedText.replace(/\D/g, '');
-          if (digits.length >= 12) {
-            const aadhaarNumber = digits.slice(0, 12);
-            const formatted = aadhaarNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
-            setAadhaar(formatted);
+          // Use scanned text as the ID value
+          const cleaned = decodedText.trim();
+          if (cleaned.length > 0) {
+            setIdNumber(cleaned);
             stopScanner();
-            // Auto-verify after scan
-            handleVerifyWithValue(formatted);
-          } else {
-            // Try using raw text if it looks like an Aadhaar
-            const raw = decodedText.replace(/\s/g, '');
-            if (/^\d{12}$/.test(raw)) {
-              const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ');
-              setAadhaar(formatted);
-              stopScanner();
-              handleVerifyWithValue(formatted);
-            }
+            handleVerifyWithValue(cleaned);
           }
         },
-        () => {
-          // QR not found in frame - ignore
-        }
+        () => { /* QR not found in frame */ }
       );
     } catch (err: any) {
       setScanning(false);
@@ -80,25 +87,23 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
       } else if (err?.toString?.().includes('NotFoundError')) {
         setScanError('No camera found on this device.');
       } else {
-        setScanError('Could not start camera. Try entering Aadhaar manually.');
+        setScanError('Could not start camera. Try entering ID manually.');
       }
     }
   };
 
   useEffect(() => {
-    return () => {
-      stopScanner();
-    };
+    return () => { stopScanner(); };
   }, []);
 
   const handleVerifyWithValue = (value: string) => {
-    const digits = value.replace(/\s/g, '');
-    if (digits.length < 12) return;
+    if (value.trim().length < 4) return;
     setVerifying(true);
     setResult('idle');
     setTimeout(() => {
       setVerifying(false);
-      if (digits.startsWith('0')) {
+      // Simulate failure if value starts with '0'
+      if (value.startsWith('0')) {
         setResult('fail');
         onFail();
       } else {
@@ -109,13 +114,34 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
   };
 
   const handleVerify = () => {
-    handleVerifyWithValue(aadhaar);
+    handleVerifyWithValue(idNumber);
   };
 
-  const formatAadhaar = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 12);
-    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+  const handleIdTypeChange = (type: IdType) => {
+    setSelectedIdType(type);
+    setIdNumber('');
+    setResult('idle');
+    setScanError('');
+    stopScanner();
   };
+
+  const placeholder = selectedIdType === 'aadhaar' ? 'XXXX XXXX XXXX' :
+    selectedIdType === 'pan' ? 'ABCDE1234F' :
+    selectedIdType === 'passport' ? 'A1234567' :
+    selectedIdType === 'driving_license' ? 'DL-0420110012345' :
+    'Enter ID number';
+
+  const formatValue = (v: string) => {
+    if (selectedIdType === 'aadhaar') {
+      const digits = v.replace(/\D/g, '').slice(0, 12);
+      return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }
+    return v;
+  };
+
+  const isValidLength = selectedIdType === 'aadhaar'
+    ? idNumber.replace(/\s/g, '').length >= 12
+    : idNumber.trim().length >= 4;
 
   return (
     <Card className="fade-in border-primary/20 shadow-lg">
@@ -125,23 +151,54 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
             <CreditCard className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-lg">Stage 1: Aadhaar Verification</CardTitle>
-            <CardDescription>Scan QR code from Aadhaar card or enter number manually</CardDescription>
+            <CardTitle className="text-lg">Stage 1: Identity Verification</CardTitle>
+            <CardDescription>Select ID type, then scan or enter details manually</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Primary: QR Scanner */}
+        {/* ID Type Selector */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Select ID Type</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between h-12 text-base font-medium"
+                disabled={verifying || result === 'success'}
+              >
+                <span className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  {selectedLabel}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto">
+              {ID_TYPES.map((type) => (
+                <DropdownMenuItem
+                  key={type.value}
+                  onClick={() => handleIdTypeChange(type.value)}
+                  className={`cursor-pointer ${selectedIdType === type.value ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                >
+                  {type.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Primary: Camera Scan */}
         {mode === 'scan' && (
           <div className="space-y-3">
-            {!scanning && !aadhaar && result === 'idle' && (
+            {!scanning && !idNumber && result === 'idle' && (
               <div className="flex flex-col items-center gap-4 py-6">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                   <QrCode className="w-8 h-8 text-primary" />
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-medium text-foreground">Scan Aadhaar QR Code</p>
-                  <p className="text-xs text-muted-foreground">Position the QR code on the Aadhaar card in front of the camera</p>
+                  <p className="text-sm font-medium text-foreground">Scan {selectedLabel}</p>
+                  <p className="text-xs text-muted-foreground">Position the ID card in front of the camera to scan and verify</p>
                 </div>
                 <Button
                   variant="booth"
@@ -149,7 +206,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
                   onClick={startScanner}
                   disabled={verifying}
                 >
-                  <Camera className="w-5 h-5" /> Start Camera Scan
+                  <Camera className="w-5 h-5" /> Scan ID Card
                 </Button>
               </div>
             )}
@@ -168,7 +225,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground text-center animate-pulse">
-                  Scanning... Point camera at the QR code on the Aadhaar card
+                  Scanning... Point camera at the {selectedLabel}
                 </p>
               </div>
             )}
@@ -184,53 +241,53 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
         {/* Manual entry mode */}
         {mode === 'manual' && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Aadhaar Number</label>
+            <label className="text-sm font-medium text-foreground">{selectedLabel} Number</label>
             <Input
-              placeholder="XXXX XXXX XXXX"
-              value={aadhaar}
-              onChange={(e) => setAadhaar(formatAadhaar(e.target.value))}
+              placeholder={placeholder}
+              value={idNumber}
+              onChange={(e) => setIdNumber(formatValue(e.target.value))}
               className="text-center text-lg tracking-widest font-mono h-12"
-              maxLength={14}
+              maxLength={selectedIdType === 'aadhaar' ? 14 : 30}
               disabled={verifying || result === 'success'}
               autoFocus
             />
           </div>
         )}
 
-        {/* Scanned Aadhaar display (in scan mode, after scan) */}
-        {mode === 'scan' && aadhaar && !scanning && (
+        {/* Scanned ID display */}
+        {mode === 'scan' && idNumber && !scanning && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Scanned Aadhaar Number</label>
+            <label className="text-sm font-medium text-foreground">Scanned {selectedLabel}</label>
             <div className="text-center text-lg tracking-widest font-mono h-12 flex items-center justify-center rounded-md border border-input bg-muted/50">
-              {aadhaar}
+              {idNumber}
             </div>
           </div>
         )}
 
         {result === 'fail' && (
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium fade-in border border-destructive/20">
-            ✗ Aadhaar verification failed. Record not found.
+            ✗ {selectedLabel} verification failed. Record not found.
           </div>
         )}
         {result === 'success' && (
           <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">
-            ✓ Aadhaar verified successfully. Proceeding...
+            ✓ {selectedLabel} verified successfully. Proceeding...
           </div>
         )}
 
-        {(mode === 'manual' || (mode === 'scan' && aadhaar && !scanning)) && result === 'idle' && (
+        {(mode === 'manual' || (mode === 'scan' && idNumber && !scanning)) && result === 'idle' && (
           <Button
             variant="booth"
             className="w-full"
             onClick={handleVerify}
-            disabled={aadhaar.replace(/\s/g, '').length < 12 || verifying}
+            disabled={!isValidLength || verifying}
           >
             {verifying ? (
               <span className="flex items-center gap-2">
                 <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                 Verifying...
               </span>
-            ) : 'Verify Aadhaar'}
+            ) : `Verify ${selectedLabel}`}
           </Button>
         )}
 
@@ -246,9 +303,9 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
               className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
             >
               {mode === 'scan' ? (
-                <><Keyboard className="w-3.5 h-3.5" /> Enter Aadhaar manually</>
+                <><Keyboard className="w-3.5 h-3.5" /> Enter ID manually</>
               ) : (
-                <><QrCode className="w-3.5 h-3.5" /> Scan QR code instead</>
+                <><QrCode className="w-3.5 h-3.5" /> Scan ID instead</>
               )}
             </button>
             <button

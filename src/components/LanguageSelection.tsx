@@ -38,7 +38,7 @@ export function LanguageSelection({ onSelect }: Props) {
             }`}
           >
             <div className="flex items-center gap-4">
-              <span className="text-3xl">🇬🇧</span>
+              <span className="text-3xl">EN</span>
               <div>
                 <p className="text-lg font-semibold text-foreground">English</p>
                 <p className="text-sm text-muted-foreground">Continue in English</p>
@@ -60,7 +60,7 @@ export function LanguageSelection({ onSelect }: Props) {
             }`}
           >
             <div className="flex items-center gap-4">
-              <span className="text-3xl">🇮🇳</span>
+              <span className="text-3xl">हि</span>
               <div>
                 <p className="text-lg font-semibold text-foreground">हिन्दी</p>
                 <p className="text-sm text-muted-foreground">हिन्दी में जारी रखें</p>

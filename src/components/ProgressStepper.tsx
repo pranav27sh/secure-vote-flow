@@ -31,7 +31,7 @@ export function ProgressStepper({ stages, currentStage }: ProgressStepperProps) 
     <div className="flex items-center justify-center gap-0 w-full max-w-lg mx-auto">
       {steps.map((step, i) => (
         <div key={i} className="flex items-center flex-1">
-          <div className="flex flex-col items-center gap-1.5 flex-1">
+          <div className="flex flex-col items-center gap-1.5">
             <div className={cn(
               'w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300',
               step.status === 'success' && 'bg-success border-success text-success-foreground',

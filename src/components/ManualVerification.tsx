@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   UserCheck,
@@ -48,16 +48,20 @@ const ID_TYPES = [
 export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
   const { t } = useLanguage();
 
-  const audit = (action: string, status: 'info' | 'success' | 'error' | 'warning', details?: string) => {
-    if (onAudit) {
-      onAudit(action, status, details);
-    } else {
-      auditLogger[status](action, details);
-    }
-  };
+  const audit = useCallback(
+    (action: string, status: 'info' | 'success' | 'error' | 'warning', details?: string) => {
+      if (onAudit) {
+        onAudit(action, status, details);
+      } else {
+        auditLogger[status](action, details);
+      }
+    },
+    [onAudit]
+  );
 
   // State for current step
   const [currentStep, setCurrentStep] = useState(1);
+  const [auditInitialized, setAuditInitialized] = useState(false);
 
   // Step 1: Voter Search
   const [searchName, setSearchName] = useState('');
@@ -91,10 +95,13 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
   const [processing, setProcessing] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  // Initialize audit logging
+  // Initialize audit logging (only once)
   useEffect(() => {
-    audit('Manual verification started', 'info');
-  }, [audit]);
+    if (!auditInitialized) {
+      audit('Manual verification started', 'info');
+      setAuditInitialized(true);
+    }
+  }, []);
 
   // Step 1: Search Voter
   const handleSearchVoter = () => {
@@ -216,7 +223,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <Search className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 1: Search Voter</CardTitle>
+              <CardTitle className="text-lg">Search Voter</CardTitle>
               <CardDescription>Find the voter in the electoral roll</CardDescription>
             </div>
           </div>
@@ -277,7 +284,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <UserCheck className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 2: Select Voter</CardTitle>
+              <CardTitle className="text-lg">Select Voter</CardTitle>
               <CardDescription>
                 Found {searchResults.length} match{searchResults.length !== 1 ? 'es' : ''}
               </CardDescription>
@@ -346,7 +353,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <Camera className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 3: Photo Matching</CardTitle>
+              <CardTitle className="text-lg">Photo Matching</CardTitle>
               <CardDescription>Verify photo matches the voter</CardDescription>
             </div>
           </div>
@@ -406,7 +413,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <CreditCard className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 4: Secondary ID Verification</CardTitle>
+              <CardTitle className="text-lg">Secondary ID Verification</CardTitle>
               <CardDescription>Confirm at least one valid ID</CardDescription>
             </div>
           </div>
@@ -471,7 +478,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <FileText className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 5: Demographic Verification</CardTitle>
+              <CardTitle className="text-lg">Demographic Verification</CardTitle>
               <CardDescription>Confirm voter details</CardDescription>
             </div>
           </div>
@@ -538,7 +545,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <AlertCircle className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 6: Reason for Manual Verification</CardTitle>
+              <CardTitle className="text-lg">Reason for Manual Verification</CardTitle>
               <CardDescription>Why is manual verification required?</CardDescription>
             </div>
           </div>
@@ -585,7 +592,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
               <UserCheck className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Step 7: Officer Authorization</CardTitle>
+              <CardTitle className="text-lg">Officer Authorization</CardTitle>
               <CardDescription>Officer and supervisor approval required</CardDescription>
             </div>
           </div>

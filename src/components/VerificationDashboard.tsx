@@ -204,6 +204,7 @@ export function VerificationDashboard() {
                   setState(prev => ({ ...prev, mode: 'primary' }));
                   addLog('Returned to primary verification', 'info');
                 }}
+                onAudit={addLog}
               />
             ) : (
               <>

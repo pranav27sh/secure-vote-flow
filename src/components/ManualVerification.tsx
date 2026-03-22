@@ -1,43 +1,692 @@
-import { useState } from 'react';
-import { UserCheck, Shield, KeyRound, CheckSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  Search,
+  UserCheck,
+  Camera,
+  CreditCard,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  ChevronRight,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { searchVoters, markVoterAsVoted, Voter } from '@/lib/voterDatabase';
+import { auditLogger } from '@/lib/auditLogger';
 
 interface Props {
   onComplete: (token: string) => void;
   onCancel: () => void;
+  onAudit?: (action: string, status: 'info' | 'success' | 'error' | 'warning', details?: string) => void;
 }
 
-export function ManualVerification({ onComplete, onCancel }: Props) {
+const VERIFICATION_REASONS = [
+  { value: 'aadhaar_not_available', label: 'Aadhaar not available' },
+  { value: 'scan_failed', label: 'Scan failed' },
+  { value: 'biometric_mismatch', label: 'Biometric mismatch' },
+  { value: 'other', label: 'Other' },
+];
+
+const ID_TYPES = [
+  { value: 'pan', label: 'PAN Card' },
+  { value: 'driving', label: 'Driving License' },
+  { value: 'passport', label: 'Passport' },
+  { value: 'aadhaar', label: 'Aadhaar' },
+];
+
+export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
   const { t } = useLanguage();
-  const [voterId, setVoterId] = useState('');
-  const [secondaryId, setSecondaryId] = useState('');
+
+  const audit = (action: string, status: 'info' | 'success' | 'error' | 'warning', details?: string) => {
+    if (onAudit) {
+      onAudit(action, status, details);
+    } else {
+      auditLogger[status](action, details);
+    }
+  };
+
+  // State for current step
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Step 1: Voter Search
+  const [searchName, setSearchName] = useState('');
+  const [searchDob, setSearchDob] = useState('');
+  const [useAge, setUseAge] = useState(false);
+  const [searchResults, setSearchResults] = useState<Voter[]>([]);
+  const [searchError, setSearchError] = useState('');
+
+  // Step 2: Select Voter
+  const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
+
+  // Step 3: Photo Matching
   const [photoMatched, setPhotoMatched] = useState(false);
+
+  // Step 4: ID Verification
+  const [idType, setIdType] = useState('');
+  const [idVerified, setIdVerified] = useState(false);
+
+  // Step 5: Demographic Verification
   const [detailsVerified, setDetailsVerified] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [approved, setApproved] = useState(false);
+
+  // Step 6: Reason
+  const [reason, setReason] = useState('');
+
+  // Step 7: Officer info
+  const [officerId, setOfficerId] = useState('EO001'); // Default officer ID
+
+  // Step 8-9: Completion state
+  const [supervisorApproved, setSupervisorApproved] = useState(false);
+  const [alreadyVotedCheck, setAlreadyVotedCheck] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
-  const handleSendOtp = () => setOtpSent(true);
-  const handleVerifyOtp = () => { if (otp.length >= 4) setOtpVerified(true); };
+  // Initialize audit logging
+  useEffect(() => {
+    audit('Manual verification started', 'info');
+  }, [audit]);
 
-  const handleApprove = () => {
+  // Step 1: Search Voter
+  const handleSearchVoter = () => {
+    setSearchError('');
+    if (!searchName.trim()) {
+      setSearchError('Please enter voter name');
+      return;
+    }
+
+    if (!searchDob.trim()) {
+      setSearchError(useAge ? 'Please enter age' : 'Please enter date of birth');
+      return;
+    }
+
+    const results = searchVoters(searchName, searchDob, useAge);
+
+    if (results.length === 0) {
+      audit('Voter search performed', 'error', `No match found for ${searchName}`);
+      setSearchError('Voter not found in electoral roll – Not eligible to vote');
+      setSearchResults([]);
+    } else {
+      audit('Voter search performed', 'success', `Found ${results.length} match(es)`);
+      setSearchResults(results);
+    }
+  };
+
+  // Step 2: Select Voter
+  const handleSelectVoter = (voter: Voter) => {
+    setSelectedVoter(voter);
+    audit('Voter selected', 'success', voter.id);
+    setCurrentStep(3); // Skip to Step 3 (Photo matching)
+  };
+
+  // Handlers for verification steps
+  const handlePhotoMatch = (checked: boolean) => {
+    setPhotoMatched(checked);
+    if (checked) {
+      audit('Photo match confirmed', 'success');
+    }
+  };
+
+  const handleIdVerified = (checked: boolean) => {
+    setIdVerified(checked);
+    if (checked) {
+      audit('ID verified', 'success', idType);
+    }
+  };
+
+  const handleDetailsVerified = (checked: boolean) => {
+    setDetailsVerified(checked);
+    if (checked) {
+      audit('Demographic details verified', 'success');
+    }
+  };
+
+  const handleNextStep = () => {
+    if (currentStep === 2 && searchResults.length > 0) {
+      setCurrentStep(3);
+    } else if (currentStep === 3 && photoMatched) {
+      setCurrentStep(4);
+    } else if (currentStep === 4 && idVerified) {
+      setCurrentStep(5);
+    } else if (currentStep === 5 && detailsVerified) {
+      setCurrentStep(6);
+    } else if (currentStep === 6 && reason) {
+      setCurrentStep(7);
+    } else if (currentStep === 7) {
+      setCurrentStep(8);
+    }
+  };
+
+  const handleSupervisorApproval = () => {
+    if (!selectedVoter) return;
+
+    // Step 8: Check if already voted
+    if (selectedVoter.hasVoted) {
+      audit('Already voted check failed', 'error', selectedVoter.id);
+      setAlreadyVotedCheck(true);
+      return;
+    }
+
+    audit('Supervisor approved manual verification', 'success');
+    setSupervisorApproved(true);
     setProcessing(true);
+
+    // Step 9: Generate token
     setTimeout(() => {
-      setApproved(true);
-      const token = 'M-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      setTimeout(() => onComplete(token), 1000);
+      const newToken = 'M-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      setToken(newToken);
+      markVoterAsVoted(selectedVoter.id);
+      audit('Token generated', 'success', newToken);
+      audit('Voter marked as voted', 'info');
+      setProcessing(false);
+
+      // Complete after showing success
+      setTimeout(() => {
+        onComplete(newToken);
+      }, 1500);
     }, 1500);
   };
 
-  const canApprove = voterId.length >= 10 && secondaryId && photoMatched && detailsVerified && otpVerified;
+  const handleGoBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    } else {
+      onCancel();
+    }
+  };
 
+  // ===== RENDER STEPS =====
+
+  // Step 1: Voter Search
+  if (currentStep === 1) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Search className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 1: Search Voter</CardTitle>
+              <CardDescription>Find the voter in the electoral roll</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Voter Name</label>
+            <Input
+              placeholder="Full name (e.g., Rajesh Kumar Singh)"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Checkbox id="useAge" checked={useAge} onCheckedChange={(v) => setUseAge(!!v)} />
+              <label htmlFor="useAge" className="text-sm cursor-pointer">
+                Search by age instead of date of birth
+              </label>
+            </div>
+            <Input
+              placeholder={useAge ? 'Age (e.g., 35)' : 'Date of birth (YYYY-MM-DD)'}
+              value={searchDob}
+              onChange={(e) => setSearchDob(e.target.value)}
+              className="h-11"
+            />
+          </div>
+
+          {searchError && (
+            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-center gap-2 border border-destructive/20">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {searchError}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={onCancel} className="flex-1">
+              Cancel
+            </Button>
+            <Button variant="default" onClick={handleSearchVoter} className="flex-1">
+              Search Voter
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 2: Select Voter
+  if (currentStep === 2) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <UserCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 2: Select Voter</CardTitle>
+              <CardDescription>
+                Found {searchResults.length} match{searchResults.length !== 1 ? 'es' : ''}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {searchResults.map((voter) => (
+            <button
+              key={voter.id}
+              onClick={() => handleSelectVoter(voter)}
+              className="w-full p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
+            >
+              <div className="flex items-start gap-3">
+                <img
+                  src={voter.photoUrl}
+                  alt={voter.name}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold">{voter.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {useAge ? `Age: ${voter.age}` : `DOB: ${voter.dob}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{voter.address}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
+              </div>
+            </button>
+          ))}
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={handleGoBack} className="flex-1">
+              Back
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!selectedVoter) {
+    return (
+      <Card className="fade-in border-destructive/30 shadow-lg">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-3">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
+            <p className="font-semibold">No Voter Selected</p>
+            <p className="text-sm text-muted-foreground">Please search and select a voter</p>
+            <Button onClick={() => setCurrentStep(1)} variant="default">
+              Start Over
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 3: Photo Matching
+  if (currentStep === 3) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Camera className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 3: Photo Matching</CardTitle>
+              <CardDescription>Verify photo matches the voter</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex justify-center">
+            <img
+              src={selectedVoter.photoUrl}
+              alt={selectedVoter.name}
+              className="w-32 h-32 rounded-full object-cover border-4 border-primary"
+            />
+          </div>
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="text-sm font-medium">{selectedVoter.name}</p>
+            <p className="text-xs text-muted-foreground mt-1">{selectedVoter.address}</p>
+          </div>
+
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+            <p className="text-sm font-semibold">Verification Checklist</p>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="photoMatch"
+                checked={photoMatched}
+                onCheckedChange={handlePhotoMatch}
+              />
+              <label htmlFor="photoMatch" className="text-sm cursor-pointer">
+                Photo matches the person
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGoBack} className="flex-1">
+              Back
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleNextStep}
+              disabled={!photoMatched}
+              className="flex-1"
+            >
+              Next
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 4: Secondary ID Verification
+  if (currentStep === 4) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 4: Secondary ID Verification</CardTitle>
+              <CardDescription>Confirm at least one valid ID</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">ID Type</label>
+            <Select value={idType} onValueChange={setIdType}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Select ID type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ID_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+            <p className="text-sm font-semibold">Verification Checklist</p>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="idVerified"
+                checked={idVerified}
+                onCheckedChange={handleIdVerified}
+                disabled={!idType}
+              />
+              <label htmlFor="idVerified" className="text-sm cursor-pointer">
+                Valid ID verified
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGoBack} className="flex-1">
+              Back
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleNextStep}
+              disabled={!idVerified}
+              className="flex-1"
+            >
+              Next
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 5: Demographic Verification
+  if (currentStep === 5) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 5: Demographic Verification</CardTitle>
+              <CardDescription>Confirm voter details</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+            <div>
+              <p className="text-xs text-muted-foreground">Name</p>
+              <p className="font-semibold">{selectedVoter.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Age</p>
+              <p className="font-semibold">{selectedVoter.age} years</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Date of Birth</p>
+              <p className="font-semibold">{selectedVoter.dob}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Address</p>
+              <p className="font-semibold">{selectedVoter.address}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+            <p className="text-sm font-semibold">Verification Checklist</p>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="detailsVerified"
+                checked={detailsVerified}
+                onCheckedChange={handleDetailsVerified}
+              />
+              <label htmlFor="detailsVerified" className="text-sm cursor-pointer">
+                Details verified
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGoBack} className="flex-1">
+              Back
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleNextStep}
+              disabled={!detailsVerified}
+              className="flex-1"
+            >
+              Next
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 6: Reason for Manual Verification
+  if (currentStep === 6) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 6: Reason for Manual Verification</CardTitle>
+              <CardDescription>Why is manual verification required?</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Select value={reason} onValueChange={setReason}>
+            <SelectTrigger className="h-11">
+              <SelectValue placeholder="Select reason" />
+            </SelectTrigger>
+            <SelectContent>
+              {VERIFICATION_REASONS.map((r) => (
+                <SelectItem key={r.value} value={r.value}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGoBack} className="flex-1">
+              Back
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleNextStep}
+              disabled={!reason}
+              className="flex-1"
+            >
+              Next
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 7: Officer + Supervisor Control
+  if (currentStep === 7) {
+    return (
+      <Card className="fade-in border-primary/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <UserCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Step 7: Officer Authorization</CardTitle>
+              <CardDescription>Officer and supervisor approval required</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+            <div>
+              <p className="text-xs text-muted-foreground">Officer ID</p>
+              <p className="font-semibold">{officerId}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Voter</p>
+              <p className="font-semibold">{selectedVoter.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Reason</p>
+              <p className="font-semibold">
+                {VERIFICATION_REASONS.find((r) => r.value === reason)?.label}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 text-xs text-warning">
+            Supervisor approval is required to proceed with token generation
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGoBack} className="flex-1">
+              Back
+            </Button>
+            <Button variant="default" onClick={handleNextStep} className="flex-1">
+              Next
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Step 8-9: Final Approval and Token Generation
+  if (supervisorApproved && token) {
+    return (
+      <Card className="fade-in border-success/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-success" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-success">Verification Complete</CardTitle>
+              <CardDescription>Voter verified and token generated</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-3 p-4 bg-success/10 rounded-lg border border-success/20">
+            <div>
+              <p className="text-xs text-success/70">Voter Name</p>
+              <p className="font-semibold text-success">{selectedVoter.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-success/70">Verification Type</p>
+              <p className="font-semibold text-success">Manually Verified</p>
+            </div>
+            <div>
+              <p className="text-xs text-success/70">Voting Token</p>
+              <p className="font-mono font-bold text-lg text-success">{token}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (alreadyVotedCheck) {
+    return (
+      <Card className="fade-in border-destructive/30 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <X className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-destructive">Already Voted</CardTitle>
+              <CardDescription>This voter has already cast their vote</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20">
+            This voter has already cast their vote and cannot vote again.
+          </div>
+          <Button onClick={() => setCurrentStep(1)} variant="outline" className="w-full">
+            Search Another Voter
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Final Approval Step
   return (
     <Card className="fade-in border-warning/30 shadow-lg">
       <CardHeader className="pb-4">
@@ -46,83 +695,61 @@ export function ManualVerification({ onComplete, onCancel }: Props) {
             <UserCheck className="w-5 h-5 text-warning" />
           </div>
           <div>
-            <CardTitle className="text-lg">{t('manualVerifTitle')}</CardTitle>
-            <CardDescription>{t('manualVerifDesc')}</CardDescription>
+            <CardTitle className="text-lg">Supervisor Approval Required</CardTitle>
+            <CardDescription>Review and approve manual verification</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" /> {t('voterIdRequired')}
-          </label>
-          <Input placeholder="e.g., ABC1234567" value={voterId}
-            onChange={(e) => setVoterId(e.target.value.toUpperCase().slice(0, 10))}
-            className="font-mono h-11 uppercase" disabled={approved} />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-primary" /> {t('secondaryId')}
-          </label>
-          <Select value={secondaryId} onValueChange={setSecondaryId} disabled={approved}>
-            <SelectTrigger className="h-11"><SelectValue placeholder={t('selectSecondary')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pan">{t('panCard')}</SelectItem>
-              <SelectItem value="driving">{t('drivingLicense')}</SelectItem>
-              <SelectItem value="passport">{t('passport')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
-          <p className="text-sm font-semibold flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-primary" /> {t('officerVerification')}
-          </p>
-          <div className="flex items-center gap-3">
-            <Checkbox id="photo" checked={photoMatched} onCheckedChange={(v) => setPhotoMatched(!!v)} disabled={approved} />
-            <label htmlFor="photo" className="text-sm cursor-pointer">{t('photoMatched')}</label>
+        <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Voter Name</p>
+              <p className="font-semibold text-sm">{selectedVoter.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Officer ID</p>
+              <p className="font-semibold text-sm">{officerId}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Checkbox id="details" checked={detailsVerified} onCheckedChange={(v) => setDetailsVerified(!!v)} disabled={approved} />
-            <label htmlFor="details" className="text-sm cursor-pointer">{t('detailsVerified')}</label>
+          <div>
+            <p className="text-xs text-muted-foreground">Reason</p>
+            <p className="font-semibold text-sm">
+              {VERIFICATION_REASONS.find((r) => r.value === reason)?.label}
+            </p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">{t('otpVerification')}</label>
-          <div className="flex gap-2">
-            <Input placeholder={otpSent ? t('enterOtp') : t('sendOtpFirst')} value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="font-mono h-11" disabled={!otpSent || otpVerified || approved} />
-            {!otpSent ? (
-              <Button variant="booth-outline" onClick={handleSendOtp} className="shrink-0">{t('sendOtp')}</Button>
-            ) : !otpVerified ? (
-              <Button variant="booth" onClick={handleVerifyOtp} disabled={otp.length < 4} className="shrink-0">{t('verify')}</Button>
+        <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+          <p className="text-xs font-semibold text-warning mb-2">Verification Steps Completed:</p>
+          <ul className="text-xs text-warning space-y-1">
+            <li>✓ Voter found in electoral roll</li>
+            <li>✓ Photo matched</li>
+            <li>✓ ID verified</li>
+            <li>✓ Demographics confirmed</li>
+          </ul>
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGoBack} className="flex-1">
+            Back
+          </Button>
+          <Button
+            variant="default"
+            onClick={handleSupervisorApproval}
+            disabled={processing}
+            className="flex-1"
+          >
+            {processing ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                Approving...
+              </span>
             ) : (
-              <Button variant="booth-success" disabled className="shrink-0">{t('verified')}</Button>
+              'Approve & Generate Token'
             )}
-          </div>
-          {otpSent && !otpVerified && (
-            <p className="text-xs text-muted-foreground">{t('mockOtpSent')}</p>
-          )}
+          </Button>
         </div>
-
-        {approved ? (
-          <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('manualApproved')}</div>
-        ) : (
-          <div className="flex gap-2 pt-2">
-            <Button variant="booth-outline" onClick={onCancel} className="flex-1">{t('cancel')}</Button>
-            <Button variant="booth-success" onClick={handleApprove} disabled={!canApprove || processing} className="flex-1">
-              {processing ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-success-foreground/30 border-t-success-foreground rounded-full animate-spin" />
-                  {t('approving')}
-                </span>
-              ) : t('supervisorApproval')}
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

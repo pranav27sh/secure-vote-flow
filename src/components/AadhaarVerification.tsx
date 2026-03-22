@@ -29,6 +29,7 @@ const ID_TYPE_KEYS = [
   { value: 'pension', labelKey: 'pensionDoc' },
   { value: 'passbook', labelKey: 'passbook' },
   { value: 'official_id', labelKey: 'officialId' },
+  { value: 'transgender_certificate', labelKey: 'transgenderCertificate' },
 ] as const;
 
 type IdType = typeof ID_TYPE_KEYS[number]['value'];

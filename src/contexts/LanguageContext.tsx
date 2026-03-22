@@ -65,6 +65,7 @@ const translations = {
     pensionDoc: 'Pension Document',
     passbook: 'Passbook',
     officialId: 'Official Identity Card',
+    transgenderCertificate: 'Transgender Certificate',
 
     // Biometric
     fingerprint: 'Fingerprint',
@@ -207,6 +208,7 @@ const translations = {
     pensionDoc: 'पेंशन दस्तावेज़',
     passbook: 'पासबुक',
     officialId: 'आधिकारिक पहचान पत्र',
+    transgenderCertificate: 'ट्रांसजेंडर प्रमाणपत्र',
 
     fingerprint: 'उंगलियों के निशान',
     irisScan: 'आईरिस स्कैन',

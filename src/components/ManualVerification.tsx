@@ -129,6 +129,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
       };
       audit('Voter search performed', 'success', 'Test case - Found 1 match');
       setSearchResults([testVoter]);
+      setCurrentStep(2); // Advance to voter selection
       return;
     }
 
@@ -141,6 +142,7 @@ export function ManualVerification({ onComplete, onCancel, onAudit }: Props) {
     } else {
       audit('Voter search performed', 'success', `Found ${results.length} match(es)`);
       setSearchResults(results);
+      setCurrentStep(2); // Advance to voter selection
     }
   };
 

@@ -15,7 +15,7 @@ import type { StageStatus } from '@/types/verification';
 const generateToken = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 export default function DigitalVerifyPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { addVoter, addAuditEntry, auditLog } = useVoterDB();
   const [languageSelected, setLanguageSelected] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -106,7 +106,7 @@ export default function DigitalVerifyPage() {
                 </p>
               </div>
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                Digital Terminal
+                {lang === 'hi' ? 'डिजिटल टर्मिनल' : 'Digital Terminal'}
               </span>
             </div>
 
@@ -125,8 +125,12 @@ export default function DigitalVerifyPage() {
                 <div className="inline-block px-8 py-4 bg-muted rounded-xl border-2 border-dashed border-primary/30 my-4">
                   <p className="text-4xl font-mono font-bold tracking-[0.3em] text-primary">{generatedToken}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">Voter ID: <span className="font-mono">{currentVoterId}</span></p>
-                <p className="text-muted-foreground mb-6">{lang === 'hi' ? 'मतदाता अब टोकन सत्यापन डेस्क पर जा सकता है' : 'Voter may now proceed to the Token Verification desk'}</p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {lang === 'hi' ? 'मतदाता आईडी' : 'Voter ID'}: <span className="font-mono">{currentVoterId}</span>
+                </p>
+                <p className="text-muted-foreground mb-6">
+                  {lang === 'hi' ? 'मतदाता अब टोकन सत्यापन डेस्क पर जा सकता है' : 'Voter may now proceed to the Token Verification desk'}
+                </p>
                 <Button variant="booth" onClick={handleReset} className="gap-2">
                   <RotateCcw className="w-4 h-4" /> {t('resetNextVoter')}
                 </Button>
@@ -156,7 +160,7 @@ export default function DigitalVerifyPage() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <div className="flex justify-between"><span>{t('boothId')}</span><span className="font-mono">BH-2024-0147</span></div>
                 <div className="flex justify-between"><span>{t('constituency')}</span><span>New Delhi - 01</span></div>
-                <div className="flex justify-between"><span>Terminal</span><span className="font-mono text-primary">Digital Verification</span></div>
+                <div className="flex justify-between"><span>Terminal</span><span className="font-mono text-primary">{lang === 'hi' ? 'डिजिटल सत्यापन' : 'Digital Verification'}</span></div>
                 <div className="flex justify-between"><span>{t('status')}</span>
                   <span className={isOnline ? 'text-success' : 'text-destructive'}>{isOnline ? t('online') : t('offline')}</span>
                 </div>
@@ -168,6 +172,3 @@ export default function DigitalVerifyPage() {
     </div>
   );
 }
-
-// Quick hack to access lang outside hook
-const lang = 'en';

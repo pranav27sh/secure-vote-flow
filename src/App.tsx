@@ -1,10 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { VoterProvider } from "@/contexts/VoterContext";
+import DigitalVerifyPage from "./pages/DigitalVerifyPage";
+import ManualVerifyPage from "./pages/ManualVerifyPage";
+import TokenCheckPage from "./pages/TokenCheckPage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -13,13 +17,19 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <LanguageProvider>
+        <VoterProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Navigate to="/verify" replace />} />
+              <Route path="/verify" element={<DigitalVerifyPage />} />
+              <Route path="/manual" element={<ManualVerifyPage />} />
+              <Route path="/token-check" element={<TokenCheckPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </VoterProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -8,13 +8,14 @@ import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
 import { LanguageSelection } from '@/components/LanguageSelection';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguageSelection } from '@/contexts/LanguageSelectionContext';
 import { useVoterDB, type VoterRecord } from '@/contexts/VoterContext';
 import { cn } from '@/lib/utils';
 
 export default function TokenCheckPage() {
   const { t, lang } = useLanguage();
+  const { isLanguageSelected, setLanguageSelected } = useLanguageSelection();
   const { getActiveToken, updateVotingStatus, addAuditEntry, auditLog, voters } = useVoterDB();
-  const [languageSelected, setLanguageSelected] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [searchId, setSearchId] = useState('');
@@ -82,13 +83,14 @@ export default function TokenCheckPage() {
     setSearchResult('idle');
     setVotingInProgress(false);
     setVoteConfirmed(false);
+    setLanguageSelected(false);
     addAuditEntry({ terminal: 'tvo', action: 'TVO session reset', status: 'info' });
-  }, [addAuditEntry, timeoutId]);
+  }, [setLanguageSelected, addAuditEntry, timeoutId]);
 
   const toggleDark = () => { setDarkMode(d => !d); document.documentElement.classList.toggle('dark'); };
   const toggleOnline = () => setIsOnline(o => !o);
 
-  if (!languageSelected) {
+  if (!isLanguageSelected) {
     return <LanguageSelection onSelect={() => setLanguageSelected(true)} />;
   }
 

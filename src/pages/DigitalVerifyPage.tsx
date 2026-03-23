@@ -9,6 +9,7 @@ import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
 import { LanguageSelection } from '@/components/LanguageSelection';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguageSelection } from '@/contexts/LanguageSelectionContext';
 import { useVoterDB } from '@/contexts/VoterContext';
 import type { StageStatus } from '@/types/verification';
 
@@ -16,8 +17,8 @@ const generateToken = () => Math.random().toString(36).substring(2, 8).toUpperCa
 
 export default function DigitalVerifyPage() {
   const { t, lang } = useLanguage();
+  const { isLanguageSelected, setLanguageSelected } = useLanguageSelection();
   const { addVoter, addAuditEntry, auditLog } = useVoterDB();
-  const [languageSelected, setLanguageSelected] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [currentStage, setCurrentStage] = useState(0);
@@ -82,12 +83,12 @@ export default function DigitalVerifyPage() {
     setCurrentVoterId('');
     setLanguageSelected(false);
     addAuditEntry({ terminal: 'digital', action: 'Session reset', status: 'info' });
-  }, [addAuditEntry]);
+  }, [setLanguageSelected, addAuditEntry]);
 
   const toggleDark = () => { setDarkMode(d => !d); document.documentElement.classList.toggle('dark'); };
   const toggleOnline = () => setIsOnline(o => !o);
 
-  if (!languageSelected) {
+  if (!isLanguageSelected) {
     return <LanguageSelection onSelect={() => setLanguageSelected(true)} />;
   }
 

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { LanguageSelectionProvider } from "@/contexts/LanguageSelectionContext";
 import { VoterProvider } from "@/contexts/VoterContext";
 import DigitalVerifyPage from "./pages/DigitalVerifyPage";
 import ManualVerifyPage from "./pages/ManualVerifyPage";
@@ -18,17 +19,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <LanguageProvider>
-        <VoterProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Navigate to="/verify" replace />} />
-              <Route path="/verify" element={<DigitalVerifyPage />} />
-              <Route path="/manual" element={<ManualVerifyPage />} />
-              <Route path="/token-check" element={<TokenCheckPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </VoterProvider>
+        <LanguageSelectionProvider>
+          <VoterProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Navigate to="/verify" replace />} />
+                <Route path="/verify" element={<DigitalVerifyPage />} />
+                <Route path="/manual" element={<ManualVerifyPage />} />
+                <Route path="/token-check" element={<TokenCheckPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </VoterProvider>
+        </LanguageSelectionProvider>
       </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>

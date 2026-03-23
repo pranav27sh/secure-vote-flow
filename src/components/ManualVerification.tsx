@@ -18,14 +18,8 @@ export function ManualVerification({ onComplete, onCancel }: Props) {
   const [secondaryId, setSecondaryId] = useState('');
   const [photoMatched, setPhotoMatched] = useState(false);
   const [detailsVerified, setDetailsVerified] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
   const [approved, setApproved] = useState(false);
   const [processing, setProcessing] = useState(false);
-
-  const handleSendOtp = () => setOtpSent(true);
-  const handleVerifyOtp = () => { if (otp.length >= 4) setOtpVerified(true); };
 
   const handleApprove = () => {
     setProcessing(true);
@@ -36,7 +30,7 @@ export function ManualVerification({ onComplete, onCancel }: Props) {
     }, 1500);
   };
 
-  const canApprove = voterId.length >= 10 && secondaryId && photoMatched && detailsVerified && otpVerified;
+  const canApprove = voterId.length >= 10 && secondaryId && photoMatched && detailsVerified;
 
   return (
     <Card className="fade-in border-warning/30 shadow-lg">
@@ -87,25 +81,6 @@ export function ManualVerification({ onComplete, onCancel }: Props) {
             <Checkbox id="details" checked={detailsVerified} onCheckedChange={(v) => setDetailsVerified(!!v)} disabled={approved} />
             <label htmlFor="details" className="text-sm cursor-pointer">{t('detailsVerified')}</label>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">{t('otpVerification')}</label>
-          <div className="flex gap-2">
-            <Input placeholder={otpSent ? t('enterOtp') : t('sendOtpFirst')} value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="font-mono h-11" disabled={!otpSent || otpVerified || approved} />
-            {!otpSent ? (
-              <Button variant="booth-outline" onClick={handleSendOtp} className="shrink-0">{t('sendOtp')}</Button>
-            ) : !otpVerified ? (
-              <Button variant="booth" onClick={handleVerifyOtp} disabled={otp.length < 4} className="shrink-0">{t('verify')}</Button>
-            ) : (
-              <Button variant="booth-success" disabled className="shrink-0">{t('verified')}</Button>
-            )}
-          </div>
-          {otpSent && !otpVerified && (
-            <p className="text-xs text-muted-foreground">{t('mockOtpSent')}</p>
-          )}
         </div>
 
         {approved ? (

@@ -228,13 +228,10 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
         )}
 
         {result === 'idle' && !verifying && (
-          <div className="pt-2 border-t border-border flex items-center justify-between">
+          <div className="pt-2 border-t border-border">
             <button onClick={() => { stopScanner(); setScanError(''); setMode(mode === 'scan' ? 'manual' : 'scan'); }}
               className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
               {mode === 'scan' ? (<><Keyboard className="w-3.5 h-3.5" /> {t('enterIdManually')}</>) : (<><QrCode className="w-3.5 h-3.5" /> {t('scanIdInstead')}</>)}
-            </button>
-            <button onClick={onSwitchManual} className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-2">
-              {t('manualVerification')}
             </button>
           </div>
         )}

@@ -10,22 +10,30 @@ interface Step {
 }
 
 interface ProgressStepperProps {
-  stages: {
-    aadhaar: StageStatus;
-    biometric: StageStatus;
-    voterId: StageStatus;
-  };
+  stages: Record<string, StageStatus>;
   currentStage: number;
 }
 
 export function ProgressStepper({ stages, currentStage }: ProgressStepperProps) {
   const { t } = useLanguage();
 
-  const steps: Step[] = [
-    { label: t('aadhaar'), icon: <CreditCard className="w-5 h-5" />, status: stages.aadhaar },
-    { label: t('biometric'), icon: <Fingerprint className="w-5 h-5" />, status: stages.biometric },
-    { label: t('voterId'), icon: <ShieldCheck className="w-5 h-5" />, status: stages.voterId },
-  ];
+  const stageKeys = Object.keys(stages);
+  const iconMap: Record<string, React.ReactNode> = {
+    aadhaar: <CreditCard className="w-5 h-5" />,
+    biometric: <Fingerprint className="w-5 h-5" />,
+    voterId: <ShieldCheck className="w-5 h-5" />,
+  };
+  const labelMap: Record<string, string> = {
+    aadhaar: t('aadhaar'),
+    biometric: t('biometric'),
+    voterId: t('voterId'),
+  };
+
+  const steps: Step[] = stageKeys.map(key => ({
+    label: labelMap[key] || key,
+    icon: iconMap[key] || <CreditCard className="w-5 h-5" />,
+    status: stages[key],
+  }));
 
   return (
     <div className="flex items-center justify-center gap-0 w-full max-w-lg mx-auto">

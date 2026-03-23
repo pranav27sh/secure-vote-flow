@@ -7,12 +7,13 @@ import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
 import { LanguageSelection } from '@/components/LanguageSelection';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguageSelection } from '@/contexts/LanguageSelectionContext';
 import { useVoterDB } from '@/contexts/VoterContext';
 
 export default function ManualVerifyPage() {
   const { t } = useLanguage();
+  const { isLanguageSelected, setLanguageSelected } = useLanguageSelection();
   const { addVoter, addAuditEntry, auditLog } = useVoterDB();
-  const [languageSelected, setLanguageSelected] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [tokenGenerated, setTokenGenerated] = useState(false);
@@ -48,12 +49,12 @@ export default function ManualVerifyPage() {
     setCurrentVoterId('');
     setLanguageSelected(false);
     addAuditEntry({ terminal: 'manual', action: 'Session reset', status: 'info' });
-  }, [addAuditEntry]);
+  }, [setLanguageSelected, addAuditEntry]);
 
   const toggleDark = () => { setDarkMode(d => !d); document.documentElement.classList.toggle('dark'); };
   const toggleOnline = () => setIsOnline(o => !o);
 
-  if (!languageSelected) {
+  if (!isLanguageSelected) {
     return <LanguageSelection onSelect={() => setLanguageSelected(true)} />;
   }
 

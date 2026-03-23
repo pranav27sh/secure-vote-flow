@@ -61,27 +61,59 @@ export function VoterIdVerification({ onSuccess, onFail, onSwitchManual }: Props
           <p className="text-xs">Please scan the voter ID using the scanner below to proceed.</p>
         </div>
 
-        <Button
-          variant="booth"
-          className="w-full gap-2"
-          onClick={handleScanVoterId}
-          disabled={verifying || result === 'success' || isScanned}
-        >
-          {verifying ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              Scanning...
-            </span>
-          ) : isScanned ? (
-            <span className="flex items-center gap-2">
-              ✓ ID Scanned
-            </span>
-          ) : (
+        {/* Camera Interface */}
+        {verifying && (
+          <div className="fade-in relative rounded-lg overflow-hidden border-2 border-primary bg-black/90">
+            {/* Camera Feed Background */}
+            <div className="relative aspect-video bg-gradient-to-b from-gray-800 to-black flex items-center justify-center">
+              {/* Camera Frame */}
+              <div className="relative w-full h-full flex items-center justify-center">
+                {/* Corner brackets */}
+                <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-primary"></div>
+                <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-primary"></div>
+                <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-primary"></div>
+                <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-primary"></div>
+
+                {/* Scanning Line */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="scan-line absolute left-0 right-0 h-1 bg-gradient-to-b from-transparent via-primary to-transparent"></div>
+                </div>
+
+                {/* Center Target */}
+                <div className="absolute w-24 h-32 border-2 border-primary/50 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <Scan className="w-8 h-8 text-primary/70 mx-auto mb-2 animate-pulse" />
+                    <p className="text-primary/70 text-xs font-semibold">Scanning...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Text */}
+            <div className="bg-black/50 px-4 py-2 text-center border-t border-primary/30">
+              <p className="text-primary text-sm font-semibold">Camera Active - Position voter ID in frame</p>
+            </div>
+          </div>
+        )}
+
+        {!verifying && !isScanned && (
+          <Button
+            variant="booth"
+            className="w-full gap-2"
+            onClick={handleScanVoterId}
+            disabled={verifying || result === 'success' || isScanned}
+          >
             <span className="flex items-center gap-2">
               <Scan className="w-4 h-4" /> Scan Voter ID
             </span>
-          )}
-        </Button>
+          </Button>
+        )}
+
+        {!verifying && isScanned && (
+          <div className="p-3 rounded-lg bg-success/10 border border-success/20 text-success text-sm font-semibold text-center">
+            ✓ Voter ID Scanned Successfully
+          </div>
+        )}
 
         {isScanned && (
           <div className="space-y-2">

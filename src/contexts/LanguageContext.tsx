@@ -89,6 +89,7 @@ const translations = {
     facialAttemptsExhausted: '⚠ Maximum facial scan attempts reached (5/5). Please proceed to the Manual Verification desk.',
     attemptsRemaining: 'attempts remaining',
     proceedToManualDesk: 'Proceed to Manual Verification Desk',
+    number: 'Number',
 
     // Voter ID
     voterIdLabel: 'Voter ID (EPIC Number)',

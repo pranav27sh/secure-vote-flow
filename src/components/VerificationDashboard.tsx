@@ -55,7 +55,7 @@ export function VerificationDashboard() {
     updateStage('biometric', 'success');
     updateStage('voterId', 'active');
     setState(prev => ({ ...prev, currentStage: 2 }));
-    addLog('Biometric verified', 'success', 'Fingerprint/iris matched');
+    addLog('Biometric verified', 'success', 'Fingerprint/facial matched');
   }, [updateStage, addLog]);
 
   const handleBiometricFail = useCallback(() => {

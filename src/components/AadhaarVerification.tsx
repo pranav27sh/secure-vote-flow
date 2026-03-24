@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { CreditCard, QrCode, Camera, X, Keyboard, ChevronDown, FileText } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { CreditCard, QrCode, Camera, X, Keyboard, ChevronDown, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+const MAX_ID_ATTEMPTS = 3;
 
 interface Props {
   onSuccess: () => void;
@@ -34,6 +36,25 @@ const ID_TYPE_KEYS = [
 
 type IdType = typeof ID_TYPE_KEYS[number]['value'];
 
+function playAlarmBeep() {
+  try {
+    const ctx = new AudioContext();
+    [0, 0.25, 0.5].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.3;
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.15);
+    });
+  } catch {
+    // Audio not supported
+  }
+}
+
 export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props) {
   const { t } = useLanguage();
   const [selectedIdType, setSelectedIdType] = useState<IdType>('voter_id');
@@ -43,10 +64,21 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
+  const [failAttempts, setFailAttempts] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const alarmPlayedRef = useRef(false);
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'id-qr-reader';
 
   const selectedLabel = t(ID_TYPE_KEYS.find(x => x.value === selectedIdType)!.labelKey as any);
+
+  const triggerLockout = useCallback(() => {
+    setLocked(true);
+    if (!alarmPlayedRef.current) {
+      alarmPlayedRef.current = true;
+      playAlarmBeep();
+    }
+  }, []);
 
   const stopScanner = async () => {
     if (scannerRef.current) {
@@ -57,6 +89,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
   };
 
   const startScanner = async () => {
+    if (locked) return;
     setScanError('');
     setScanning(true);
     await new Promise(r => setTimeout(r, 100));
@@ -88,18 +121,29 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
   useEffect(() => { return () => { stopScanner(); }; }, []);
 
   const handleVerifyWithValue = (value: string) => {
-    if (value.trim().length < 4) return;
+    if (value.trim().length < 4 || locked) return;
     setVerifying(true); setResult('idle');
     setTimeout(() => {
       setVerifying(false);
-      if (value.startsWith('0')) { setResult('fail'); onFail(); }
-      else { setResult('success'); setTimeout(onSuccess, 800); }
+      if (value.startsWith('0')) {
+        setResult('fail');
+        const newAttempts = failAttempts + 1;
+        setFailAttempts(newAttempts);
+        if (newAttempts >= MAX_ID_ATTEMPTS) {
+          triggerLockout();
+        }
+        onFail();
+      } else {
+        setResult('success');
+        setTimeout(onSuccess, 800);
+      }
     }, 2000);
   };
 
   const handleVerify = () => handleVerifyWithValue(idNumber);
 
   const handleIdTypeChange = (type: IdType) => {
+    if (locked) return;
     setSelectedIdType(type); setIdNumber(''); setResult('idle'); setScanError(''); stopScanner();
   };
 
@@ -122,6 +166,35 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
     : selectedIdType === 'aadhaar'
     ? idNumber.replace(/\s/g, '').length >= 12
     : idNumber.trim().length >= 4;
+
+  if (locked) {
+    return (
+      <Card className="fade-in border-destructive/40 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-destructive">{t('stage1Title')}</CardTitle>
+              <CardDescription>{t('stage1Desc')}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-6 rounded-xl bg-destructive/10 border-2 border-destructive/30 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto animate-pulse">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <p className="text-destructive font-semibold text-lg">{t('idAttemptsExhausted')}</p>
+            <Button variant="booth-destructive" className="gap-2" onClick={onSwitchManual}>
+              {t('proceedToManualDesk')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="fade-in border-primary/20 shadow-lg">
@@ -205,6 +278,16 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">{t('scanned')} {selectedLabel}</label>
             <div className="text-center text-lg tracking-widest font-mono h-12 flex items-center justify-center rounded-md border border-input bg-muted/50">{idNumber}</div>
+          </div>
+        )}
+
+        {/* Attempt counter */}
+        {result === 'fail' && failAttempts > 0 && (
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <span className="text-warning font-medium">
+              {failAttempts}/{MAX_ID_ATTEMPTS}
+            </span>
+            <span className="text-muted-foreground">— {MAX_ID_ATTEMPTS - failAttempts} {t('attemptsRemaining')}</span>
           </div>
         )}
 

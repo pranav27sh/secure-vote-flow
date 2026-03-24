@@ -19,6 +19,7 @@ interface Props {
 }
 
 const ID_TYPE_KEYS = [
+  { value: 'voter_id', labelKey: 'voterId' },
   { value: 'aadhaar', labelKey: 'aadhaarCard' },
   { value: 'pan', labelKey: 'panCard' },
   { value: 'driving_license', labelKey: 'drivingLicense' },
@@ -29,7 +30,6 @@ const ID_TYPE_KEYS = [
   { value: 'service_id', labelKey: 'serviceId' },
   { value: 'pension', labelKey: 'pensionDoc' },
   { value: 'passbook', labelKey: 'passbook' },
-  { value: 'official_id', labelKey: 'officialId' },
   { value: 'transgender_certificate', labelKey: 'transgenderCertificate' },
 ] as const;
 
@@ -38,7 +38,7 @@ type IdType = typeof ID_TYPE_KEYS[number]['value'];
 export function ManualVerification({ onComplete, onCancel }: Props) {
   const { t } = useLanguage();
   const [voterId, setVoterId] = useState('');
-  const [selectedIdType, setSelectedIdType] = useState<IdType>('aadhaar');
+  const [selectedIdType, setSelectedIdType] = useState<IdType>('voter_id');
   const [idNumber, setIdNumber] = useState('');
   const [photoMatched, setPhotoMatched] = useState(false);
   const [detailsVerified, setDetailsVerified] = useState(false);

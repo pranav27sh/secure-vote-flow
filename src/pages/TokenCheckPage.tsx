@@ -19,6 +19,7 @@ import { useVoterDB, type VoterRecord } from '@/contexts/VoterContext';
 import { cn } from '@/lib/utils';
 
 const ID_TYPE_KEYS = [
+  { value: 'voter_id', labelKey: 'voterId' },
   { value: 'aadhaar', labelKey: 'aadhaarCard' },
   { value: 'pan', labelKey: 'panCard' },
   { value: 'driving_license', labelKey: 'drivingLicense' },
@@ -29,7 +30,6 @@ const ID_TYPE_KEYS = [
   { value: 'service_id', labelKey: 'serviceId' },
   { value: 'pension', labelKey: 'pensionDoc' },
   { value: 'passbook', labelKey: 'passbook' },
-  { value: 'official_id', labelKey: 'officialId' },
   { value: 'transgender_certificate', labelKey: 'transgenderCertificate' },
 ] as const;
 
@@ -42,7 +42,7 @@ export default function TokenCheckPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [searchId, setSearchId] = useState('');
-  const [selectedIdType, setSelectedIdType] = useState<IdType | 'voter_id'>('voter_id');
+  const [selectedIdType, setSelectedIdType] = useState<IdType>('voter_id');
   const [foundVoter, setFoundVoter] = useState<VoterRecord | null>(null);
   const [searchResult, setSearchResult] = useState<'idle' | 'found' | 'not_found'>('idle');
   const [votingInProgress, setVotingInProgress] = useState(false);
@@ -231,10 +231,6 @@ export default function TokenCheckPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto">
-                        <DropdownMenuItem onClick={() => setSelectedIdType('voter_id')}
-                          className={`cursor-pointer ${selectedIdType === 'voter_id' ? 'bg-primary/10 text-primary font-medium' : ''}`}>
-                          {lang === 'hi' ? 'मतदाता आईडी' : 'Voter ID'}
-                        </DropdownMenuItem>
                         {ID_TYPE_KEYS.map((type) => (
                           <DropdownMenuItem key={type.value} onClick={() => setSelectedIdType(type.value)}
                             className={`cursor-pointer ${selectedIdType === type.value ? 'bg-primary/10 text-primary font-medium' : ''}`}>

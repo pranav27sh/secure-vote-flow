@@ -24,7 +24,7 @@ export function ProgressStepper({ stages, currentStage }: ProgressStepperProps) 
     voterId: <ShieldCheck className="w-5 h-5" />,
   };
   const labelMap: Record<string, string> = {
-    identity: t('identity') || 'Identity',
+    identity: 'Identity',
     biometric: t('biometric'),
     voterId: t('voterId'),
   };

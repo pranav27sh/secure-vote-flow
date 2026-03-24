@@ -18,6 +18,7 @@ interface Props {
 }
 
 const ID_TYPE_KEYS = [
+  { value: 'voter_id', labelKey: 'voterId' },
   { value: 'aadhaar', labelKey: 'aadhaarCard' },
   { value: 'pan', labelKey: 'panCard' },
   { value: 'driving_license', labelKey: 'drivingLicense' },
@@ -28,7 +29,6 @@ const ID_TYPE_KEYS = [
   { value: 'service_id', labelKey: 'serviceId' },
   { value: 'pension', labelKey: 'pensionDoc' },
   { value: 'passbook', labelKey: 'passbook' },
-  { value: 'official_id', labelKey: 'officialId' },
   { value: 'transgender_certificate', labelKey: 'transgenderCertificate' },
 ] as const;
 
@@ -36,7 +36,7 @@ type IdType = typeof ID_TYPE_KEYS[number]['value'];
 
 export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props) {
   const { t } = useLanguage();
-  const [selectedIdType, setSelectedIdType] = useState<IdType>('aadhaar');
+  const [selectedIdType, setSelectedIdType] = useState<IdType>('voter_id');
   const [idNumber, setIdNumber] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [result, setResult] = useState<'idle' | 'success' | 'fail'>('idle');
@@ -103,7 +103,8 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
     setSelectedIdType(type); setIdNumber(''); setResult('idle'); setScanError(''); stopScanner();
   };
 
-  const placeholder = selectedIdType === 'aadhaar' ? 'XXXX XXXX XXXX' :
+  const placeholder = selectedIdType === 'voter_id' ? 'VTRXXXXXX' :
+    selectedIdType === 'aadhaar' ? 'XXXX XXXX XXXX' :
     selectedIdType === 'pan' ? 'ABCDE1234F' :
     selectedIdType === 'passport' ? 'A1234567' :
     selectedIdType === 'driving_license' ? 'DL-0420110012345' : 'Enter ID number';
@@ -116,7 +117,9 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
     return v;
   };
 
-  const isValidLength = selectedIdType === 'aadhaar'
+  const isValidLength = selectedIdType === 'voter_id'
+    ? idNumber.trim().length >= 6
+    : selectedIdType === 'aadhaar'
     ? idNumber.replace(/\s/g, '').length >= 12
     : idNumber.trim().length >= 4;
 

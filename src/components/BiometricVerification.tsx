@@ -11,7 +11,7 @@ const MAX_FACIAL_ATTEMPTS = 5;
 interface Props {
   onSuccess: () => void;
   onFail: () => void;
-  onSwitchManual: () => void;
+  // onSwitchManual: () => void;
 }
 
 interface BiometricResult {
@@ -39,7 +39,7 @@ function playAlarmBeep() {
   }
 }
 
-export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Props) {
+export function BiometricVerification({ onSuccess, onFail}: Props) {
   const { t } = useLanguage();
   const [scanning, setScanning] = useState(false);
   const [fingerprintResult, setFingerprintResult] = useState<BiometricResult>({ status: 'idle', completed: false });
@@ -234,11 +234,6 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
           </Button>
         </div>
 
-        <div className="pt-2 border-t border-border">
-          <button onClick={onSwitchManual} className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-2">
-            {t('biometricUnavailable')}
-          </button>
-        </div>
       </CardContent>
     </Card>
   );

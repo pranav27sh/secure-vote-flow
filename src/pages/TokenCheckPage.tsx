@@ -1,8 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ShieldCheck, Search, CheckCircle2, XCircle, AlertTriangle, Clock, RotateCcw, Volume2 } from 'lucide-react';
+import { ShieldCheck, Search, CheckCircle2, XCircle, AlertTriangle, Clock, RotateCcw, Volume2, FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SharedHeader } from '@/components/SharedHeader';
 import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
@@ -12,6 +18,23 @@ import { useLanguageSelection } from '@/contexts/LanguageSelectionContext';
 import { useVoterDB, type VoterRecord } from '@/contexts/VoterContext';
 import { cn } from '@/lib/utils';
 
+const ID_TYPE_KEYS = [
+  { value: 'aadhaar', labelKey: 'aadhaarCard' },
+  { value: 'pan', labelKey: 'panCard' },
+  { value: 'driving_license', labelKey: 'drivingLicense' },
+  { value: 'passport', labelKey: 'passport' },
+  { value: 'mgnrega', labelKey: 'mgnregaCard' },
+  { value: 'smart_card', labelKey: 'smartCard' },
+  { value: 'health_insurance', labelKey: 'healthInsurance' },
+  { value: 'service_id', labelKey: 'serviceId' },
+  { value: 'pension', labelKey: 'pensionDoc' },
+  { value: 'passbook', labelKey: 'passbook' },
+  { value: 'official_id', labelKey: 'officialId' },
+  { value: 'transgender_certificate', labelKey: 'transgenderCertificate' },
+] as const;
+
+type IdType = typeof ID_TYPE_KEYS[number]['value'];
+
 export default function TokenCheckPage() {
   const { t, lang } = useLanguage();
   const { isLanguageSelected, setLanguageSelected } = useLanguageSelection();
@@ -19,17 +42,33 @@ export default function TokenCheckPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [searchId, setSearchId] = useState('');
+  const [selectedIdType, setSelectedIdType] = useState<IdType | 'voter_id'>('voter_id');
   const [foundVoter, setFoundVoter] = useState<VoterRecord | null>(null);
   const [searchResult, setSearchResult] = useState<'idle' | 'found' | 'not_found'>('idle');
   const [votingInProgress, setVotingInProgress] = useState(false);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
+  const selectedIdLabel = selectedIdType === 'voter_id' ? (lang === 'hi' ? 'मतदाता आईडी' : 'Voter ID') : t(ID_TYPE_KEYS.find(x => x.value === selectedIdType)!.labelKey as any);
+
   const terminalAudit = auditLog.filter(e => e.terminal === 'tvo');
 
   const handleSearch = useCallback(() => {
     if (searchId.trim().length < 3) return;
-    const voter = getActiveToken(searchId.trim());
+    let voter: VoterRecord | undefined;
+
+    if (selectedIdType === 'voter_id') {
+      voter = getActiveToken(searchId.trim());
+    } else {
+      // Search by ID type and ID number
+      voter = voters.find(v =>
+        v.idType === selectedIdType &&
+        v.idNumber.toUpperCase() === searchId.trim().toUpperCase() &&
+        v.votingStatus === 'TOKEN_ACTIVE' &&
+        new Date() < v.tokenExpiresAt
+      );
+    }
+
     if (voter) {
       setFoundVoter(voter);
       setSearchResult('found');
@@ -39,7 +78,7 @@ export default function TokenCheckPage() {
       setSearchResult('not_found');
       addAuditEntry({ terminal: 'tvo', action: 'Token lookup failed', status: 'error', details: `No active token for: ${searchId}` });
     }
-  }, [searchId, getActiveToken, addAuditEntry]);
+  }, [searchId, selectedIdType, getActiveToken, voters, addAuditEntry]);
 
   const handleApproveEntry = useCallback(() => {
     if (!foundVoter) return;
@@ -183,12 +222,36 @@ export default function TokenCheckPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">{t('selectIdType')}</label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between h-11 text-base font-medium">
+                          <span className="flex items-center gap-2"><FileText className="w-4 h-4 text-muted-foreground" />{selectedIdLabel}</span>
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto">
+                        <DropdownMenuItem onClick={() => setSelectedIdType('voter_id')}
+                          className={`cursor-pointer ${selectedIdType === 'voter_id' ? 'bg-primary/10 text-primary font-medium' : ''}`}>
+                          {lang === 'hi' ? 'मतदाता आईडी' : 'Voter ID'}
+                        </DropdownMenuItem>
+                        {ID_TYPE_KEYS.map((type) => (
+                          <DropdownMenuItem key={type.value} onClick={() => setSelectedIdType(type.value)}
+                            className={`cursor-pointer ${selectedIdType === type.value ? 'bg-primary/10 text-primary font-medium' : ''}`}>
+                            {t(type.labelKey as any)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">
-                      {lang === 'hi' ? 'मतदाता आईडी दर्ज करें' : 'Enter Voter ID'}
+                      {lang === 'hi' ? (selectedIdType === 'voter_id' ? 'मतदाता आईडी दर्ज करें' : selectedIdLabel + ' दर्ज करें') : (selectedIdType === 'voter_id' ? 'Enter Voter ID' : `Enter ${selectedIdLabel}`)}
                     </label>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="e.g., VTRXXXXXX"
+                        placeholder={selectedIdType === 'voter_id' ? "e.g., VTRXXXXXX" : "Enter ID number"}
                         value={searchId}
                         onChange={(e) => { setSearchId(e.target.value.toUpperCase()); setSearchResult('idle'); }}
                         className="font-mono h-12 text-lg uppercase"

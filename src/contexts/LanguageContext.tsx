@@ -239,6 +239,7 @@ const translations = {
     facialAttemptsExhausted: '⚠ अधिकतम फेशियल स्कैन प्रयास पूर्ण (5/5)। कृपया मैनुअल सत्यापन डेस्क पर जाएं।',
     attemptsRemaining: 'प्रयास शेष',
     proceedToManualDesk: 'मैनुअल सत्यापन डेस्क पर जाएं',
+    number: 'नंबर',
 
     voterIdLabel: 'मतदाता पहचान पत्र (EPIC नंबर)',
     uploadVoterId: 'मतदाता पहचान पत्र की छवि अपलोड करें',

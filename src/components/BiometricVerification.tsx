@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { Fingerprint, ScanEye } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { Fingerprint, ScanFace, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+const MAX_FINGERPRINT_ATTEMPTS = 5;
+const MAX_FACIAL_ATTEMPTS = 5;
 
 interface Props {
   onSuccess: () => void;
@@ -16,17 +19,52 @@ interface BiometricResult {
   completed: boolean;
 }
 
+function playAlarmBeep() {
+  try {
+    const ctx = new AudioContext();
+    // Play 3 short warning beeps
+    [0, 0.25, 0.5].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.3;
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.15);
+    });
+  } catch {
+    // Audio not supported
+  }
+}
+
 export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Props) {
   const { t } = useLanguage();
   const [scanning, setScanning] = useState(false);
   const [fingerprintResult, setFingerprintResult] = useState<BiometricResult>({ status: 'idle', completed: false });
-  const [irisResult, setIrisResult] = useState<BiometricResult>({ status: 'idle', completed: false });
-  const [currentPhase, setCurrentPhase] = useState<'fingerprint' | 'iris'>('fingerprint');
+  const [facialResult, setFacialResult] = useState<BiometricResult>({ status: 'idle', completed: false });
+  const [currentPhase, setCurrentPhase] = useState<'fingerprint' | 'facial'>('fingerprint');
+  const [fingerprintAttempts, setFingerprintAttempts] = useState(0);
+  const [facialAttempts, setFacialAttempts] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const alarmPlayedRef = useRef(false);
+
+  const maxAttempts = currentPhase === 'fingerprint' ? MAX_FINGERPRINT_ATTEMPTS : MAX_FACIAL_ATTEMPTS;
+  const currentAttempts = currentPhase === 'fingerprint' ? fingerprintAttempts : facialAttempts;
+
+  const triggerLockout = useCallback(() => {
+    setLocked(true);
+    if (!alarmPlayedRef.current) {
+      alarmPlayedRef.current = true;
+      playAlarmBeep();
+    }
+  }, []);
 
   const handleScan = () => {
+    if (locked) return;
     setScanning(true);
-    const currentResult = currentPhase === 'fingerprint' ? fingerprintResult : irisResult;
-    const setCurrentResult = currentPhase === 'fingerprint' ? setFingerprintResult : setIrisResult;
+    const setCurrentResult = currentPhase === 'fingerprint' ? setFingerprintResult : setFacialResult;
 
     setCurrentResult({ status: 'idle', completed: false });
 
@@ -36,25 +74,66 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
       if (success) {
         setCurrentResult({ status: 'success', completed: true });
 
-        // If fingerprint was successful, move to iris
         if (currentPhase === 'fingerprint') {
           setTimeout(() => {
-            setCurrentPhase('iris');
+            setCurrentPhase('facial');
           }, 800);
-        }
-        // If iris was successful, complete biometric verification
-        else {
+        } else {
           setTimeout(onSuccess, 800);
         }
       } else {
         setCurrentResult({ status: 'fail', completed: false });
+        
+        if (currentPhase === 'fingerprint') {
+          const newAttempts = fingerprintAttempts + 1;
+          setFingerprintAttempts(newAttempts);
+          if (newAttempts >= MAX_FINGERPRINT_ATTEMPTS) {
+            triggerLockout();
+          }
+        } else {
+          const newAttempts = facialAttempts + 1;
+          setFacialAttempts(newAttempts);
+          if (newAttempts >= MAX_FACIAL_ATTEMPTS) {
+            triggerLockout();
+          }
+        }
         onFail();
       }
     }, 3000);
   };
 
-  const isAllBiometricsComplete = fingerprintResult.completed && irisResult.completed;
-  const currentResult = currentPhase === 'fingerprint' ? fingerprintResult : irisResult;
+  const isAllBiometricsComplete = fingerprintResult.completed && facialResult.completed;
+  const currentResult = currentPhase === 'fingerprint' ? fingerprintResult : facialResult;
+
+  if (locked) {
+    const exhaustedKey = currentPhase === 'fingerprint' ? 'fingerprintAttemptsExhausted' : 'facialAttemptsExhausted';
+    return (
+      <Card className="fade-in border-destructive/40 shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-destructive">{t('stage2Title')}</CardTitle>
+              <CardDescription>{t('stage2Desc')}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-6 rounded-xl bg-destructive/10 border-2 border-destructive/30 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto animate-pulse">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <p className="text-destructive font-semibold text-lg">{t(exhaustedKey as any)}</p>
+            <Button variant="booth-destructive" className="gap-2" onClick={onSwitchManual}>
+              {t('proceedToManualDesk')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="fade-in border-primary/20 shadow-lg">
@@ -88,19 +167,29 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
           </div>
           <div className="flex-1">
             <div className={cn('p-3 rounded-lg border-2 transition-all',
-              irisResult.completed ? 'border-success bg-success/10' :
-              currentPhase === 'iris' ? 'border-primary bg-primary/10' : 'border-border')}>
+              facialResult.completed ? 'border-success bg-success/10' :
+              currentPhase === 'facial' ? 'border-primary bg-primary/10' : 'border-border')}>
               <div className="flex items-center gap-2 mb-1">
-                <ScanEye className="w-4 h-4" />
-                <span className="text-sm font-semibold">{t('irisScan')}</span>
-                {irisResult.completed && <span className="text-success ml-auto">✓</span>}
+                <ScanFace className="w-4 h-4" />
+                <span className="text-sm font-semibold">{t('facialScan')}</span>
+                {facialResult.completed && <span className="text-success ml-auto">✓</span>}
               </div>
               <p className="text-xs text-muted-foreground">
-                {irisResult.completed ? t('biometricSuccess') : currentPhase === 'iris' ? t('currentPhase') : t('pending')}
+                {facialResult.completed ? t('biometricSuccess') : currentPhase === 'facial' ? t('currentPhase') : t('pending')}
               </p>
             </div>
           </div>
         </div>
+
+        {/* Attempt counter */}
+        {currentResult.status === 'fail' && currentAttempts > 0 && (
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <span className="text-warning font-medium">
+              {currentAttempts}/{maxAttempts}
+            </span>
+            <span className="text-muted-foreground">— {maxAttempts - currentAttempts} {t('attemptsRemaining')}</span>
+          </div>
+        )}
 
         <div className="relative w-32 h-32 mx-auto">
           <div className={cn('w-full h-full rounded-full border-4 flex items-center justify-center transition-all duration-300',
@@ -109,7 +198,7 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
             {currentPhase === 'fingerprint' ? (
               <Fingerprint className={cn('w-16 h-16 transition-colors', scanning ? 'text-primary' : 'text-muted-foreground/40')} />
             ) : (
-              <ScanEye className={cn('w-16 h-16 transition-colors', scanning ? 'text-primary' : 'text-muted-foreground/40')} />
+              <ScanFace className={cn('w-16 h-16 transition-colors', scanning ? 'text-primary' : 'text-muted-foreground/40')} />
             )}
           </div>
           {scanning && (
@@ -121,14 +210,14 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          {scanning ? t('scanningHoldStill') : currentResult.status === 'idle' ? `${t('pressScanBegin')} ${currentPhase === 'fingerprint' ? t('fingerprint') : t('irisScan')} ${t('capture')}` : ''}
+          {scanning ? t('scanningHoldStill') : currentResult.status === 'idle' ? `${t('pressScanBegin')} ${currentPhase === 'fingerprint' ? t('fingerprint') : t('facialScan')} ${t('capture')}` : ''}
         </p>
 
         {currentResult.status === 'fail' && (
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium fade-in border border-destructive/20">{t('biometricFailed')}</div>
         )}
         {currentResult.status === 'success' && currentPhase === 'fingerprint' && (
-          <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('fingerprint')} {t('biometricSuccess')} - {t('proceedingIris')}</div>
+          <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('fingerprint')} {t('biometricSuccess')} - {t('proceedingFacial')}</div>
         )}
         {isAllBiometricsComplete && (
           <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">{t('allBiometricsSuccess')}</div>

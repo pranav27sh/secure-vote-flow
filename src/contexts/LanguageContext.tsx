@@ -30,7 +30,7 @@ const translations = {
     stage1Title: 'Stage 1: Identity Verification',
     stage1Desc: 'Select ID type, then scan or enter details manually',
     stage2Title: 'Stage 2: Biometric Verification',
-    stage2Desc: 'Place finger on scanner or look into iris reader',
+    stage2Desc: 'Place finger on scanner or look into facial reader',
     stage3Title: 'Stage 3: Voter ID Verification',
     stage3Desc: 'Enter or scan the voter\'s EPIC number',
 
@@ -69,7 +69,7 @@ const translations = {
 
     // Biometric
     fingerprint: 'Fingerprint',
-    irisScan: 'Iris Scan',
+    facialScan: 'Facial Scan',
     scanningHoldStill: 'Scanning... Please hold still',
     pressScanBegin: 'Press scan to begin',
     capture: 'capture',
@@ -80,8 +80,16 @@ const translations = {
     biometricUnavailable: '👉 Biometric unavailable? Switch to Manual Verification',
     currentPhase: 'In Progress',
     pending: 'Pending',
-    proceedingIris: 'Proceeding to Iris Scan...',
-    allBiometricsSuccess: '✓ Both fingerprint and iris verified successfully. Proceeding to Voter ID verification...',
+    proceedingFacial: 'Proceeding to Facial Scan...',
+    allBiometricsSuccess: '✓ Both fingerprint and facial scan verified successfully. Proceeding to Voter ID verification...',
+
+    // Attempt limits
+    idAttemptsExhausted: '⚠ Maximum ID verification attempts reached (3/3). Please proceed to the Manual Verification desk.',
+    fingerprintAttemptsExhausted: '⚠ Maximum fingerprint scan attempts reached (5/5). Please proceed to the Manual Verification desk.',
+    facialAttemptsExhausted: '⚠ Maximum facial scan attempts reached (5/5). Please proceed to the Manual Verification desk.',
+    attemptsRemaining: 'attempts remaining',
+    proceedToManualDesk: 'Proceed to Manual Verification Desk',
+    number: 'Number',
 
     // Voter ID
     voterIdLabel: 'Voter ID (EPIC Number)',
@@ -175,7 +183,7 @@ const translations = {
     stage1Title: 'चरण 1: पहचान सत्यापन',
     stage1Desc: 'आईडी प्रकार चुनें, फिर स्कैन करें या मैन्युअल रूप से दर्ज करें',
     stage2Title: 'चरण 2: बायोमेट्रिक सत्यापन',
-    stage2Desc: 'स्कैनर पर उंगली रखें या आईरिस रीडर में देखें',
+    stage2Desc: 'स्कैनर पर उंगली रखें या फेशियल रीडर में देखें',
     stage3Title: 'चरण 3: मतदाता पहचान पत्र सत्यापन',
     stage3Desc: 'मतदाता का EPIC नंबर दर्ज करें या स्कैन करें',
 
@@ -211,7 +219,7 @@ const translations = {
     transgenderCertificate: 'ट्रांसजेंडर प्रमाणपत्र',
 
     fingerprint: 'उंगलियों के निशान',
-    irisScan: 'आईरिस स्कैन',
+    facialScan: 'फेशियल स्कैन',
     scanningHoldStill: 'स्कैन हो रहा है... कृपया स्थिर रहें',
     pressScanBegin: 'स्कैन शुरू करने के लिए दबाएं',
     capture: 'कैप्चर',
@@ -222,8 +230,16 @@ const translations = {
     biometricUnavailable: '👉 बायोमेट्रिक उपलब्ध नहीं? मैनुअल सत्यापन पर जाएं',
     currentPhase: 'प्रगति में',
     pending: 'लंबित',
-    proceedingIris: 'आईरिस स्कैन पर आगे बढ़ रहे हैं...',
-    allBiometricsSuccess: '✓ फिंगरप्रिंट और आईरिस दोनों सफलतापूर्वक सत्यापित। मतदाता पहचान पत्र सत्यापन पर आगे बढ़ रहे हैं...',
+    proceedingFacial: 'फेशियल स्कैन पर आगे बढ़ रहे हैं...',
+    allBiometricsSuccess: '✓ फिंगरप्रिंट और फेशियल स्कैन दोनों सफलतापूर्वक सत्यापित। मतदाता पहचान पत्र सत्यापन पर आगे बढ़ रहे हैं...',
+
+    // Attempt limits
+    idAttemptsExhausted: '⚠ अधिकतम पहचान सत्यापन प्रयास पूर्ण (3/3)। कृपया मैनुअल सत्यापन डेस्क पर जाएं।',
+    fingerprintAttemptsExhausted: '⚠ अधिकतम फिंगरप्रिंट स्कैन प्रयास पूर्ण (5/5)। कृपया मैनुअल सत्यापन डेस्क पर जाएं।',
+    facialAttemptsExhausted: '⚠ अधिकतम फेशियल स्कैन प्रयास पूर्ण (5/5)। कृपया मैनुअल सत्यापन डेस्क पर जाएं।',
+    attemptsRemaining: 'प्रयास शेष',
+    proceedToManualDesk: 'मैनुअल सत्यापन डेस्क पर जाएं',
+    number: 'नंबर',
 
     voterIdLabel: 'मतदाता पहचान पत्र (EPIC नंबर)',
     uploadVoterId: 'मतदाता पहचान पत्र की छवि अपलोड करें',

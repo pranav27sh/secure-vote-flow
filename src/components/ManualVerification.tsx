@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { UserCheck, Shield, KeyRound, CheckSquare } from 'lucide-react';
+import { UserCheck, Shield, KeyRound, CheckSquare, FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Props {
@@ -12,14 +18,34 @@ interface Props {
   onCancel: () => void;
 }
 
+const ID_TYPE_KEYS = [
+  { value: 'voter_id', labelKey: 'voterId' },
+  { value: 'aadhaar', labelKey: 'aadhaarCard' },
+  { value: 'pan', labelKey: 'panCard' },
+  { value: 'driving_license', labelKey: 'drivingLicense' },
+  { value: 'passport', labelKey: 'passport' },
+  { value: 'mgnrega', labelKey: 'mgnregaCard' },
+  { value: 'smart_card', labelKey: 'smartCard' },
+  { value: 'health_insurance', labelKey: 'healthInsurance' },
+  { value: 'service_id', labelKey: 'serviceId' },
+  { value: 'pension', labelKey: 'pensionDoc' },
+  { value: 'passbook', labelKey: 'passbook' },
+  { value: 'transgender_certificate', labelKey: 'transgenderCertificate' },
+] as const;
+
+type IdType = typeof ID_TYPE_KEYS[number]['value'];
+
 export function ManualVerification({ onComplete, onCancel }: Props) {
   const { t } = useLanguage();
   const [voterId, setVoterId] = useState('');
-  const [secondaryId, setSecondaryId] = useState('');
+  const [selectedIdType, setSelectedIdType] = useState<IdType>('voter_id');
+  const [idNumber, setIdNumber] = useState('');
   const [photoMatched, setPhotoMatched] = useState(false);
   const [detailsVerified, setDetailsVerified] = useState(false);
   const [approved, setApproved] = useState(false);
   const [processing, setProcessing] = useState(false);
+
+  const selectedIdLabel = t(ID_TYPE_KEYS.find(x => x.value === selectedIdType)!.labelKey as any);
 
   const handleApprove = () => {
     setProcessing(true);
@@ -30,7 +56,7 @@ export function ManualVerification({ onComplete, onCancel }: Props) {
     }, 1500);
   };
 
-  const canApprove = voterId.length >= 10 && secondaryId && photoMatched && detailsVerified;
+  const canApprove = idNumber && photoMatched && detailsVerified;
 
   return (
     <Card className="fade-in border-warning/30 shadow-lg">
@@ -48,25 +74,33 @@ export function ManualVerification({ onComplete, onCancel }: Props) {
       <CardContent className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-sm font-medium flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" /> {t('voterIdRequired')}
+            <FileText className="w-4 h-4 text-primary" /> {t('selectIdType')}
           </label>
-          <Input placeholder="e.g., ABC1234567" value={voterId}
-            onChange={(e) => setVoterId(e.target.value.toUpperCase().slice(0, 10))}
-            className="font-mono h-11 uppercase" disabled={approved} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between h-11 text-base font-medium" disabled={approved}>
+                <span className="flex items-center gap-2">{selectedIdLabel}</span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto">
+              {ID_TYPE_KEYS.map((type) => (
+                <DropdownMenuItem key={type.value} onClick={() => setSelectedIdType(type.value)}
+                  className={`cursor-pointer ${selectedIdType === type.value ? 'bg-primary/10 text-primary font-medium' : ''}`}>
+                  {t(type.labelKey as any)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-primary" /> {t('secondaryId')}
+            <KeyRound className="w-4 h-4 text-primary" /> {selectedIdLabel} {t('number')}
           </label>
-          <Select value={secondaryId} onValueChange={setSecondaryId} disabled={approved}>
-            <SelectTrigger className="h-11"><SelectValue placeholder={t('selectSecondary')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pan">{t('panCard')}</SelectItem>
-              <SelectItem value="driving">{t('drivingLicense')}</SelectItem>
-              <SelectItem value="passport">{t('passport')}</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input placeholder="Enter ID number" value={idNumber}
+            onChange={(e) => setIdNumber(e.target.value.toUpperCase())}
+            className="font-mono h-11 uppercase" disabled={approved} />
         </div>
 
         <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">

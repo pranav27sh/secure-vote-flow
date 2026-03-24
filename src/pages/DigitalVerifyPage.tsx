@@ -22,7 +22,7 @@ export default function DigitalVerifyPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [currentStage, setCurrentStage] = useState(0);
-  const [stages, setStages] = useState<Record<string, StageStatus>>({ aadhaar: 'active', biometric: 'pending' });
+  const [stages, setStages] = useState<Record<string, StageStatus>>({ identity: 'active', biometric: 'pending' });
   const [tokenGenerated, setTokenGenerated] = useState(false);
   const [generatedToken, setGeneratedToken] = useState('');
   const [currentVoterId, setCurrentVoterId] = useState('');
@@ -34,14 +34,14 @@ export default function DigitalVerifyPage() {
   }, []);
 
   const handleIdSuccess = useCallback(() => {
-    updateStage('aadhaar', 'success');
+    updateStage('identity', 'success');
     updateStage('biometric', 'active');
     setCurrentStage(1);
     addAuditEntry({ terminal: 'digital', action: 'ID verified', status: 'success', details: 'Identity document verified' });
   }, [updateStage, addAuditEntry]);
 
   const handleIdFail = useCallback(() => {
-    updateStage('aadhaar', 'failed');
+    updateStage('identity', 'failed');
     addAuditEntry({ terminal: 'digital', action: 'ID verification failed', status: 'error' });
   }, [updateStage, addAuditEntry]);
 
@@ -77,7 +77,7 @@ export default function DigitalVerifyPage() {
 
   const handleReset = useCallback(() => {
     setCurrentStage(0);
-    setStages({ aadhaar: 'active', biometric: 'pending' });
+    setStages({ identity: 'active', biometric: 'pending' });
     setTokenGenerated(false);
     setGeneratedToken('');
     setCurrentVoterId('');

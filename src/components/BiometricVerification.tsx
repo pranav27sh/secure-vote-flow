@@ -70,7 +70,7 @@ export function BiometricVerification({ onSuccess, onFail, onSwitchManual }: Pro
 
     setTimeout(() => {
       setScanning(false);
-      const success = Math.random() > 0.15;
+      const success = (currentPhase === 'facial') ? 1 : 0;
       if (success) {
         setCurrentResult({ status: 'success', completed: true });
 

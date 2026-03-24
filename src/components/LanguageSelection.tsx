@@ -1,6 +1,8 @@
 import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ECILogo } from "@/components/ECILogo";
+
 
 interface Props {
   onSelect: () => void;
@@ -13,8 +15,8 @@ export function LanguageSelection({ onSelect }: Props) {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md text-center space-y-8">
         <div className="space-y-4">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto">
-            <Shield className="w-9 h-9 text-primary-foreground" />
+          <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto">
+            <ECILogo size={64} /> 
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Choose Your Language</h1>

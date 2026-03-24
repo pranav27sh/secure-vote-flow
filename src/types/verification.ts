@@ -10,6 +10,31 @@ export interface AuditEntry {
   details?: string;
 }
 
+export interface Voter {
+  id: string;
+  name: string;
+  dob: string; // YYYY-MM-DD
+  age: number;
+  address: string;
+  photoUrl: string;
+  hasVoted: boolean;
+}
+
+export interface ManualVerificationState {
+  currentStep: number;
+  searchResults: Voter[];
+  selectedVoter: Voter | null;
+  photoMatched: boolean;
+  idVerified: boolean;
+  idType: string | null;
+  detailsVerified: boolean;
+  verificationReason: string | null;
+  officerId: string;
+  supervisorApproved: boolean;
+  token: string | null;
+  auditLog: AuditEntry[];
+}
+
 export interface VerificationState {
   mode: VerificationMode;
   currentStage: number;

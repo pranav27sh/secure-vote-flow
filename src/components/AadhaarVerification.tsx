@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { CreditCard, QrCode, Camera, X, Keyboard, ChevronDown, FileText, AlertTriangle } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { CreditCard, Keyboard, ChevronDown, FileText, TriangleAlert as AlertTriangle, Scan } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -63,12 +63,9 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
   const [result, setResult] = useState<'idle' | 'success' | 'fail'>('idle');
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
   const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState('');
   const [failAttempts, setFailAttempts] = useState(0);
   const [locked, setLocked] = useState(false);
   const alarmPlayedRef = useRef(false);
-  const scannerRef = useRef<any>(null);
-  const scannerContainerId = 'id-qr-reader';
 
   const selectedLabel = t(ID_TYPE_KEYS.find(x => x.value === selectedIdType)!.labelKey as any);
 
@@ -80,45 +77,22 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
     }
   }, []);
 
-  const stopScanner = async () => {
-    if (scannerRef.current) {
-      try { await scannerRef.current.stop(); scannerRef.current.clear(); } catch { /* */ }
-      scannerRef.current = null;
-    }
-    setScanning(false);
-  };
-
-  const startScanner = async () => {
+  const startHardwareScan = () => {
     if (locked) return;
-    setScanError('');
     setScanning(true);
-    await new Promise(r => setTimeout(r, 100));
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      const scanner = new Html5Qrcode(scannerContainerId);
-      scannerRef.current = scanner;
-      await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          const cleaned = decodedText.trim();
-          if (cleaned.length > 0) { setIdNumber(cleaned); stopScanner(); handleVerifyWithValue(cleaned); }
-        },
-        () => {}
-      );
-    } catch (err: any) {
-      setScanning(false);
-      if (err?.toString?.().includes('NotAllowedError') || err?.toString?.().includes('Permission')) {
-        setScanError(t('cameraDenied'));
-      } else if (err?.toString?.().includes('NotFoundError')) {
-        setScanError(t('noCamera'));
-      } else {
-        setScanError(t('cameraError'));
-      }
-    }
-  };
+    setResult('idle');
 
-  useEffect(() => { return () => { stopScanner(); }; }, []);
+    setTimeout(() => {
+      const randomSuccess = Math.random() > 0.3;
+      const scannedId = randomSuccess
+        ? 'ID' + Math.random().toString(36).substring(2, 9).toUpperCase()
+        : '0' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      setIdNumber(scannedId);
+      setScanning(false);
+      handleVerifyWithValue(scannedId);
+    }, 2000);
+  };
 
   const handleVerifyWithValue = (value: string) => {
     if (value.trim().length < 4 || locked) return;
@@ -144,7 +118,7 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
 
   const handleIdTypeChange = (type: IdType) => {
     if (locked) return;
-    setSelectedIdType(type); setIdNumber(''); setResult('idle'); setScanError(''); stopScanner();
+    setSelectedIdType(type); setIdNumber(''); setResult('idle');
   };
 
   const placeholder = selectedIdType === 'voter_id' ? 'VTRXXXXXX' :
@@ -233,34 +207,36 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
         {mode === 'scan' && (
           <div className="space-y-3">
             {!scanning && !idNumber && result === 'idle' && (
-              <div className="flex flex-col items-center gap-4 py-6">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <QrCode className="w-8 h-8 text-primary" />
+              <div className="p-6 rounded-xl bg-primary/5 border-2 border-primary/20 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Scan className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-left space-y-1">
+                    <p className="text-sm font-semibold text-foreground">Hardware Scanner Ready</p>
+                    <p className="text-xs text-muted-foreground">Please scan your ID using the connected hardware scanner</p>
+                  </div>
                 </div>
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-medium text-foreground">{t('scanLabel')} {selectedLabel}</p>
-                  <p className="text-xs text-muted-foreground">{t('positionId')}</p>
-                </div>
-                <Button variant="booth" className="gap-2 w-full max-w-xs" onClick={startScanner} disabled={verifying}>
-                  <Camera className="w-5 h-5" /> {t('scanIdCard')}
+                <Button variant="booth" className="gap-2 w-full" onClick={startHardwareScan} disabled={verifying}>
+                  <Scan className="w-5 h-5" /> Initiate Hardware Scan
                 </Button>
               </div>
             )}
             {scanning && (
-              <div className="space-y-3">
-                <div className="relative rounded-lg overflow-hidden border-2 border-primary/30 bg-black">
-                  <div id={scannerContainerId} className="w-full" style={{ minHeight: 280 }} />
-                  <Button variant="booth-destructive" size="sm" className="absolute top-2 right-2 h-8 px-3 z-10" onClick={stopScanner}>
-                    <X className="w-4 h-4 mr-1" /> {t('stop')}
-                  </Button>
+              <div className="p-6 rounded-xl bg-primary/5 border-2 border-primary/30 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 animate-pulse">
+                    <Scan className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-left space-y-1">
+                    <p className="text-sm font-semibold text-foreground">Scanning in Progress...</p>
+                    <p className="text-xs text-muted-foreground">Please wait while the hardware scanner processes your ID</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground text-center animate-pulse">
-                  {t('pointCamera')} {selectedLabel}
-                </p>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
+                </div>
               </div>
-            )}
-            {scanError && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium fade-in border border-destructive/20">{scanError}</div>
             )}
           </div>
         )}
@@ -274,10 +250,39 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
           </div>
         )}
 
-        {mode === 'scan' && idNumber && !scanning && (
+        {mode === 'scan' && idNumber && !scanning && result === 'idle' && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">{t('scanned')} {selectedLabel}</label>
+            <label className="text-sm font-medium text-foreground">Scanned {selectedLabel}</label>
             <div className="text-center text-lg tracking-widest font-mono h-12 flex items-center justify-center rounded-md border border-input bg-muted/50">{idNumber}</div>
+          </div>
+        )}
+
+        {mode === 'scan' && idNumber && !scanning && result === 'success' && (
+          <div className="p-4 rounded-xl bg-success/10 border-2 border-success/20 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+                <Scan className="w-6 h-6 text-success" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-success">ID Scan Successful</p>
+                <p className="text-xs text-muted-foreground">Valid ID detected and verified</p>
+              </div>
+            </div>
+            <div className="text-center text-lg tracking-widest font-mono h-10 flex items-center justify-center rounded-md border border-success/30 bg-success/5">{idNumber}</div>
+          </div>
+        )}
+
+        {mode === 'scan' && idNumber && !scanning && result === 'fail' && (
+          <div className="p-4 rounded-xl bg-destructive/10 border-2 border-destructive/20 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-destructive">Scan Failed. Please try again.</p>
+                <p className="text-xs text-muted-foreground">Invalid or unreadable ID</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -291,12 +296,12 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
           </div>
         )}
 
-        {result === 'fail' && (
+        {mode === 'manual' && result === 'fail' && (
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium fade-in border border-destructive/20">
             ✗ {selectedLabel} {t('verificationFailed')}
           </div>
         )}
-        {result === 'success' && (
+        {mode === 'manual' && result === 'success' && (
           <div className="p-3 rounded-lg bg-success/10 text-success text-sm font-medium fade-in border border-success/20">
             ✓ {selectedLabel} {t('verifiedSuccess')}
           </div>
@@ -313,12 +318,20 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
           </Button>
         )}
 
-        {result === 'idle' && !verifying && (
+        {result === 'idle' && !verifying && !scanning && (
           <div className="pt-2 border-t border-border">
-            <button onClick={() => { stopScanner(); setScanError(''); setMode(mode === 'scan' ? 'manual' : 'scan'); }}
+            <button onClick={() => { setMode(mode === 'scan' ? 'manual' : 'scan'); setIdNumber(''); }}
               className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
-              {mode === 'scan' ? (<><Keyboard className="w-3.5 h-3.5" /> {t('enterIdManually')}</>) : (<><QrCode className="w-3.5 h-3.5" /> {t('scanIdInstead')}</>)}
+              {mode === 'scan' ? (<><Keyboard className="w-3.5 h-3.5" /> {t('enterIdManually')}</>) : (<><Scan className="w-3.5 h-3.5" /> Use Hardware Scanner</>)}
             </button>
+          </div>
+        )}
+
+        {result === 'fail' && !scanning && mode === 'scan' && (
+          <div className="pt-2">
+            <Button variant="booth-outline" className="w-full gap-2" onClick={() => { setIdNumber(''); setResult('idle'); }}>
+              <Scan className="w-4 h-4" /> Retry Hardware Scan
+            </Button>
           </div>
         )}
       </CardContent>

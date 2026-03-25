@@ -15,7 +15,6 @@ const MAX_ID_ATTEMPTS = 3;
 interface Props {
   onSuccess: () => void;
   onFail: () => void;
-  onSwitchManual: () => void;
 }
 
 const ID_TYPE_KEYS = [
@@ -52,7 +51,7 @@ function playAlarmBeep() {
   } catch {}
 }
 
-export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props) {
+export function AadhaarVerification({ onSuccess, onFail }: Props) {
   const { t } = useLanguage();
 
   const [selectedIdType, setSelectedIdType] = useState<IdType>('voter_id');
@@ -129,9 +128,9 @@ export function AadhaarVerification({ onSuccess, onFail, onSwitchManual }: Props
         <CardContent className="text-center space-y-4">
           <AlertTriangle className="w-12 h-12 text-destructive mx-auto animate-pulse" />
           <p className="text-destructive font-semibold">{t('idAttemptsExhausted')}</p>
-          <Button variant="destructive" onClick={onSwitchManual}>
-            {t('proceedToManualDesk')}
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            This verification terminal cannot proceed. Contact the election officials for assistance.
+          </p>
         </CardContent>
       </Card>
     );

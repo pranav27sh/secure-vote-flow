@@ -11,7 +11,6 @@ const MAX_FACIAL_ATTEMPTS = 5;
 interface Props {
   onSuccess: () => void;
   onFail: () => void;
-  // onSwitchManual: () => void;
 }
 
 interface BiometricResult {
@@ -126,9 +125,9 @@ export function BiometricVerification({ onSuccess, onFail}: Props) {
               <AlertTriangle className="w-8 h-8 text-destructive" />
             </div>
             <p className="text-destructive font-semibold text-lg">{t(exhaustedKey as any)}</p>
-            <Button variant="booth-destructive" className="gap-2" onClick={onSwitchManual}>
-              {t('proceedToManualDesk')}
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              This verification terminal cannot proceed. Contact the election officials for assistance.
+            </p>
           </div>
         </CardContent>
       </Card>

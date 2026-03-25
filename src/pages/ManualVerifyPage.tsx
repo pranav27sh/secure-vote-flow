@@ -3,7 +3,6 @@ import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ManualVerification } from '@/components/ManualVerification';
 import { SharedHeader } from '@/components/SharedHeader';
-import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
 import { LanguageSelection } from '@/components/LanguageSelection';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -47,9 +46,10 @@ export default function ManualVerifyPage() {
     setTokenGenerated(false);
     setGeneratedToken('');
     setCurrentVoterId('');
-    setLanguageSelected(false);
+    // Note: For manual verification, we do NOT reset language selection
+    // The language stays selected for the next voter
     addAuditEntry({ terminal: 'manual', action: 'Session reset', status: 'info' });
-  }, [setLanguageSelected, addAuditEntry]);
+  }, [addAuditEntry]);
 
   const toggleDark = () => { setDarkMode(d => !d); document.documentElement.classList.toggle('dark'); };
   const toggleOnline = () => setIsOnline(o => !o);
@@ -61,7 +61,6 @@ export default function ManualVerifyPage() {
   return (
     <div className="min-h-screen bg-background">
       <SharedHeader darkMode={darkMode} toggleDark={toggleDark} isOnline={isOnline} toggleOnline={toggleOnline} />
-      <TerminalNav />
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

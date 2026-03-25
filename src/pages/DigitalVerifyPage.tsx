@@ -5,7 +5,6 @@ import { ProgressStepper } from '@/components/ProgressStepper';
 import { AadhaarVerification } from '@/components/AadhaarVerification';
 import { BiometricVerification } from '@/components/BiometricVerification';
 import { SharedHeader } from '@/components/SharedHeader';
-import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
 import { LanguageSelection } from '@/components/LanguageSelection';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -95,7 +94,6 @@ export default function DigitalVerifyPage() {
   return (
     <div className="min-h-screen bg-background">
       <SharedHeader darkMode={darkMode} toggleDark={toggleDark} isOnline={isOnline} toggleOnline={toggleOnline} />
-      <TerminalNav />
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -139,10 +137,10 @@ export default function DigitalVerifyPage() {
             ) : (
               <>
                 {currentStage === 0 && (
-                  <AadhaarVerification onSuccess={handleIdSuccess} onFail={handleIdFail} onSwitchManual={() => {}} />
+                  <AadhaarVerification onSuccess={handleIdSuccess} onFail={handleIdFail} />
                 )}
                 {currentStage === 1 && (
-                  <BiometricVerification onSuccess={handleBiometricSuccess} onFail={handleBiometricFail} onSwitchManual={() => {}} />
+                  <BiometricVerification onSuccess={handleBiometricSuccess} onFail={handleBiometricFail} />
                 )}
               </>
             )}

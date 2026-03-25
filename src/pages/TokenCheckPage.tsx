@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SharedHeader } from '@/components/SharedHeader';
-import { TerminalNav } from '@/components/TerminalNav';
 import { AuditLog } from '@/components/AuditLog';
 import { LanguageSelection } from '@/components/LanguageSelection';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -122,9 +121,10 @@ export default function TokenCheckPage() {
     setSearchResult('idle');
     setVotingInProgress(false);
     setVoteConfirmed(false);
-    setLanguageSelected(false);
+    // Note: For token verification, we do NOT reset language selection
+    // The language stays selected for the next voter
     addAuditEntry({ terminal: 'tvo', action: 'TVO session reset', status: 'info' });
-  }, [setLanguageSelected, addAuditEntry, timeoutId]);
+  }, [addAuditEntry, timeoutId]);
 
   const toggleDark = () => { setDarkMode(d => !d); document.documentElement.classList.toggle('dark'); };
   const toggleOnline = () => setIsOnline(o => !o);
@@ -140,7 +140,6 @@ export default function TokenCheckPage() {
   return (
     <div className="min-h-screen bg-background">
       <SharedHeader darkMode={darkMode} toggleDark={toggleDark} isOnline={isOnline} toggleOnline={toggleOnline} />
-      <TerminalNav />
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
